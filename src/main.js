@@ -132,12 +132,22 @@ function renderBookingDetail(booking, assignment) {
 
 async function loadDriverData() {
   loading = true; render()
-  const { data: driverRow } = await supabase.from('drivers').select('*').maybeSingle()
-  driver = driverRow
-  if (driver) { const { data: areas } = await supabase.from('driver_service_areas').select('state').order('state'); serviceAreas = (areas||[]).map(a=>a.state) }
+  let driverRow = null
+  const { data: rpcDriver, error: rpcError } = await supabase.rpc('get_my_driver')
+  if (!rpcError && rpcDriver) driverRow = rpcDriver
+  else {
+    const uid = session?.user?.id
+    if (uid) {
+      await supabase.rpc('register_driver', { p_full_name: '', p_phone: '', p_states: [] })
+      const { data: linked } = await supabase.from('drivers').select('*').eq('user_id', uid).maybeSingle()
+      driverRow = linked
+    }
+  }
+  driver = driverRow || null
+  if (driver) { const { data: areas } = await supabase.from('driver_service_areas').select('state').eq('driver_id', driver.id).order('state'); serviceAreas = (areas||[]).map(a=>a.state) }
   else { serviceAreas = [] }
   if (!driver || driver.status !== 'approved') { assignments = []; bookingsById = {}; loading = false; render(); return }
-  const { data: assignmentRows } = await supabase.from('job_assignments').select('*').order('assigned_at',{ascending:false})
+  const { data: assignmentRows } = await supabase.from('job_assignments').select('*').eq('driver_id', driver.id).order('assigned_at',{ascending:false})
   assignments = assignmentRows || []
   const bookingIds = [...new Set(assignments.map(a=>a.booking_id))]
   if (bookingIds.length) { const { data: bookingRows } = await supabase.from('bookings').select('*').in('id',bookingIds); bookingsById = Object.fromEntries((bookingRows||[]).map(b=>[b.id,b])) }
@@ -150,7 +160,7 @@ function renderLoginPage() {
   setTimeout(() => {
     if (authView === 'login') {
       const f = document.getElementById('login-form'); const e = document.getElementById('login-error')
-      f.addEventListener('submit', async (ev) => { ev.preventDefault(); const em = document.getElementById('login-email').value; const pw = document.getElementById('login-password').value; e.classList.add('hidden'); const { data, error } = await supabase.auth.signInWithPassword({ email: em, password: pw }); if (error) { e.textContent = error.message; e.classList.remove('hidden') } else { session = data.session; renderApp(); loadDriverData() } })
+      f.addEventListener('submit', async (ev) => { ev.preventDefault(); const em = document.getElementById('login-email').value; const pw = document.getElementById('login-password').value; e.classList.add('hidden'); const { data, error } = await supabase.auth.signInWithPassword({ email: em, password: pw }); if (error) { e.textContent = error.message; e.classList.remove('hidden') } else { session = data.session; renderApp(); await loadDriverData() } })
     } else {
       const f = document.getElementById('signup-form'); const e = document.getElementById('signup-error')
       f.addEventListener('submit', async (ev) => { ev.preventDefault(); const em = document.getElementById('signup-email').value; const pw = document.getElementById('signup-password').value; const nm = document.getElementById('signup-name').value; const ph = document.getElementById('signup-phone').value; const st = parseStatesInput(document.getElementById('signup-states').value); e.classList.add('hidden'); const { data, error } = await supabase.auth.signUp({ email: em, password: pw }); if (error) { e.textContent = error.message; e.classList.remove('hidden') } else { session = data.session; if (session) { const { error: regError } = await supabase.rpc('register_driver', { p_full_name: nm, p_phone: ph, p_states: st }); if (regError) { e.textContent = regError.message; e.classList.remove('hidden'); return }; await loadDriverData() } else { e.textContent = 'Check your email to confirm your account, then sign in.'; e.classList.remove('hidden') } } })
@@ -166,8 +176,14 @@ function renderEmptyState(label, hint) {
   return `<div class="flex flex-col items-center justify-center h-full text-gray-400 px-6 py-12"><svg class="w-16 h-16 mb-4 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">${iconMap[label]||iconMap['Jobs']}</svg><p class="text-lg font-medium text-gray-500">No ${label.toLowerCase()} yet</p><p class="text-sm text-gray-400 mt-1 text-center">${hint||`Your ${label.toLowerCase()} will appear here`}</p></div>`
 }
 
+function renderAppLoading() {
+  return [1,2].map(()=>'<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 animate-pulse mb-3"><div class="h-4 bg-gray-200 rounded w-24 mb-3"></div><div class="h-4 bg-gray-200 rounded w-32 mb-2"></div><div class="h-8 bg-gray-200 rounded w-full mt-4"></div></div>').join('')
+}
+
 function renderPendingScreen() {
-  const isPending = driver?.status === 'pending'; const isSuspended = driver?.status === 'suspended'; const noProfile = !driver
+  const isPending = driver?.status === 'pending'
+  const isSuspended = driver?.status === 'suspended'
+  const noProfile = !driver
   return `<div class="flex flex-col items-center justify-center h-full px-6 py-12 text-center"><div class="w-16 h-16 rounded-full flex items-center justify-center mb-4 ${isSuspended?'bg-red-100':'bg-amber-100'}"><svg class="w-8 h-8 ${isSuspended?'text-red-600':'text-amber-600'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${iconsSvg.clock}</svg></div><h2 class="text-lg font-bold text-gray-800 mb-2">${noProfile?'Complete your profile':isSuspended?'Account suspended':'Pending approval'}</h2><p class="text-sm text-gray-500 max-w-xs">${noProfile?'Contact support to link your contractor account, or sign out and create a new driver account.':isSuspended?'Your driver account has been suspended. Contact Opek support for help.':'Your application is under review. You will see job offers here once an admin approves your account.'}</p>${driver&&serviceAreas.length?`<p class="text-xs text-gray-400 mt-4">Service areas: ${serviceAreas.join(', ')}</p>`:''}<button id="logout-btn" class="mt-8 text-sm text-red-600 font-medium">Sign out</button></div>`
 }
 
@@ -175,12 +191,11 @@ function offerCard(assignment) {
   const booking = getBookingForAssignment(assignment)
   if (!booking) return ''
   const sc = assignmentStatusConfig.offered
-  const serviceBadge = serviceTypeConfig[booking.booking_details?.service_type] || 'bg-gray-100 text-gray-700'
-  return `<div class="offer-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-3 border-l-4 ${sc.border}" data-assignment-id="${assignment.id}"><div class="p-4"><div class="flex items-start justify-between mb-2"><div class="flex items-center gap-2"><span class="text-xs px-2 py-0.5 rounded-full font-medium ${sc.bg} ${sc.text}">New offer</span><span class="text-sm font-bold text-gray-800">${booking.location_info?.city||booking.order_number||''}</span></div><span class="text-lg font-bold text-gray-900">$${booking.booking_details?.price||0}</span></div><p class="font-semibold text-gray-800 mb-1">${booking.customer_info?.name||'Unknown'}</p><span class="inline-block text-xs px-1.5 py-0.5 rounded font-medium ${serviceBadge}">${booking.booking_details?.service_type||'Service'}</span><p class="text-xs text-gray-500 mt-2">${booking.location_info?.city||''}, ${booking.location_info?.state||''}</p><p class="text-xs text-gray-500">${formatDate(booking.booking_details?.preferred_date)} &middot; ${booking.booking_details?.preferred_time||''}</p>${assignment.note?`<p class="text-xs text-gray-400 mt-2 italic">"${assignment.note}"</p>`:''}<div class="flex gap-2 mt-4"><button class="accept-offer-btn flex-1 bg-emerald-600 text-white font-semibold py-2.5 rounded-xl text-sm active:scale-[0.98] transition" data-assignment-id="${assignment.id}">Accept</button><button class="decline-offer-btn flex-1 bg-gray-100 text-gray-700 font-semibold py-2.5 rounded-xl text-sm active:scale-[0.98] transition" data-assignment-id="${assignment.id}">Decline</button></div></div></div>`
+  const sb = serviceTypeConfig[booking.booking_details?.service_type] || 'bg-gray-100 text-gray-700'
+  return `<div class="offer-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-3 border-l-4 ${sc.border}" data-assignment-id="${assignment.id}"><div class="p-4"><div class="flex items-start justify-between mb-2"><div class="flex items-center gap-2"><span class="text-xs px-2 py-0.5 rounded-full font-medium ${sc.bg} ${sc.text}">New offer</span><span class="text-sm font-bold text-gray-800">${booking.location_info?.city||booking.order_number||''}</span></div><span class="text-lg font-bold text-gray-900">$${booking.booking_details?.price||0}</span></div><p class="font-semibold text-gray-800 mb-1">${booking.customer_info?.name||'Unknown'}</p><span class="inline-block text-xs px-1.5 py-0.5 rounded font-medium ${sb}">${booking.booking_details?.service_type||'Service'}</span><p class="text-xs text-gray-500 mt-2">${booking.location_info?.city||''}, ${booking.location_info?.state||''}</p><p class="text-xs text-gray-500">${formatDate(booking.booking_details?.preferred_date)} &middot; ${booking.booking_details?.preferred_time||''}</p>${assignment.note?`<p class="text-xs text-gray-400 mt-2 italic">"${assignment.note}"</p>`:''}<div class="flex gap-2 mt-4"><button class="accept-offer-btn flex-1 bg-emerald-600 text-white font-semibold py-2.5 rounded-xl text-sm active:scale-[0.98] transition" data-assignment-id="${assignment.id}">Accept</button><button class="decline-offer-btn flex-1 bg-gray-100 text-gray-700 font-semibold py-2.5 rounded-xl text-sm active:scale-[0.98] transition" data-assignment-id="${assignment.id}">Decline</button></div></div></div>`
 }
 
 function renderOffersContent() {
-  if (loading) return [1,2].map(()=>'<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 animate-pulse mb-3"><div class="h-4 bg-gray-200 rounded w-24 mb-3"></div><div class="h-4 bg-gray-200 rounded w-32 mb-2"></div><div class="h-8 bg-gray-200 rounded w-full mt-4"></div></div>').join('')
   const offers = getOffers()
   if (!offers.length) return renderEmptyState('Offers','New job offers from dispatch will appear here')
   return `<div class="mb-4"><span class="text-sm text-gray-500 font-medium">${offers.length} pending offer${offers.length!==1?'s':''}</span></div>${offers.map(a=>offerCard(a)).join('')}`
@@ -206,8 +221,8 @@ function renderScheduleContent() {
     if (isSelected) cellClass += ' bg-emerald-600 text-white font-bold'; else if (isToday) cellClass += ' bg-emerald-100 text-emerald-800 font-bold'; else cellClass += ' text-gray-700 hover:bg-gray-100'
     calendarHTML += `<div class="${cellClass}" data-date="${dateStr}"><span>${day}</span>${hasJobs?'<span class="w-1 h-1 rounded-full '+(isSelected?'bg-white':'bg-emerald-500')+'"></span>':''}</div>`
   }
-  const selectedDateJobs = scheduleSelectedDate ? getBookingsForDate(scheduleSelectedDate) : []
   const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
+  const selectedDateJobs = scheduleSelectedDate ? getBookingsForDate(scheduleSelectedDate) : []
   return `<div class="space-y-4"><div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"><div class="flex items-center justify-between px-4 py-3 border-b border-gray-50"><button id="prev-month" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 transition text-gray-500"><svg class="w-4 h-4" viewBox="0 0 24 24">${iconsSvg.chevronLeft}</svg></button><span class="text-sm font-bold text-gray-800">${formatMonth(scheduleMonth)}</span><button id="next-month" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 transition text-gray-500"><svg class="w-4 h-4 rotate-180" viewBox="0 0 24 24">${iconsSvg.chevronLeft}</svg></button></div><div class="p-3"><div class="grid grid-cols-7 text-center text-xs font-medium text-gray-400 mb-1">${dayNames.map(d=>`<div>${d}</div>`).join('')}</div><div class="grid grid-cols-7 gap-0.5">${calendarHTML}</div></div></div>${scheduleSelectedDate?`<div><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">${formatDate(scheduleSelectedDate)}</h3><div class="space-y-2">${selectedDateJobs.length?selectedDateJobs.map(b=>{const sc=statusConfig[b.status]||statusConfig.pending;const sb=serviceTypeConfig[b.booking_details?.service_type]||'bg-gray-100 text-gray-700';return`<div class="schedule-job-card bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer" data-booking-id="${b.id}"><div class="w-2 h-10 ${sc.dot} rounded-full shrink-0"></div><div class="min-w-0 flex-1"><p class="text-sm font-semibold text-gray-800 truncate">${b.customer_info?.name||'Unknown'}</p><div class="flex items-center gap-2 mt-0.5"><span class="text-xs font-medium ${sc.text} capitalize">${(b.status||'pending').replace('_',' ')}</span><span class="text-xs px-1.5 py-0.5 rounded font-medium ${sb}">${b.booking_details?.service_type||''}</span></div></div><span class="text-sm font-bold text-gray-900 shrink-0">$${b.booking_details?.price||0}</span></div>`}).join(''):'<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center text-sm text-gray-400">No jobs on this date</div>'}</div></div>`:''}${upcoming.length?`<div><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">Upcoming</h3><div class="space-y-2">${upcoming.slice(0,6).map(b=>{const sc=statusConfig[b.status]||statusConfig.pending;const sb=serviceTypeConfig[b.booking_details?.service_type]||'bg-gray-100 text-gray-700';return`<div class="schedule-job-card bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer" data-booking-id="${b.id}"><div class="flex flex-col items-center shrink-0 w-12"><span class="text-xs font-bold text-gray-500">${new Date(b.booking_details.preferred_date+'T00:00:00').toLocaleDateString('en-US',{month:'short'}).toUpperCase()}</span><span class="text-lg font-bold text-gray-800">${new Date(b.booking_details.preferred_date+'T00:00:00').getDate()}</span></div><div class="min-w-0 flex-1"><p class="text-sm font-semibold text-gray-800 truncate">${b.customer_info?.name||'Unknown'}</p><div class="flex items-center gap-2 mt-0.5"><span class="text-xs font-medium ${sc.text} capitalize">${(b.status||'pending').replace('_',' ')}</span><span class="text-xs px-1.5 py-0.5 rounded font-medium ${sb}">${b.booking_details?.service_type||''}</span><span class="text-xs text-gray-400">${b.booking_details?.preferred_time||''}</span></div></div><span class="text-sm font-bold text-gray-900 shrink-0">$${b.booking_details?.price||0}</span></div>`}).join('')}</div></div>`:`<div class="text-center text-gray-400 py-8"><svg class="w-12 h-12 mx-auto mb-2 text-gray-300" viewBox="0 0 24 24">${iconsSvg.calendar}</svg><p class="text-sm">No upcoming jobs</p></div>`}</div>`
 }
 
@@ -221,22 +236,26 @@ function renderApp() {
   const params = new URLSearchParams(window.location.hash.slice(1))
   const active = params.get('tab') || 'offers'
   const offersCount = getOffers().length
-  const contentMap = { offers: () => renderOffersContent(), jobs: () => renderJobsContent(), schedule: () => renderScheduleContent(), settings: () => renderSettingsContent() }
-  const showApp = driver?.status === 'approved'
-  document.querySelector('#app').innerHTML = `<div class="flex flex-col h-dvh max-w-md mx-auto bg-gray-50 shadow-xl relative overflow-hidden"><header class="bg-white border-b border-gray-100 px-5 pt-12 pb-3 shrink-0"><div class="flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="text-lg font-bold text-emerald-700">Opek</span><span class="text-lg font-bold text-gray-400">Driver</span></div><div class="w-7 h-7 bg-emerald-100 rounded-full flex items-center justify-center"><span class="text-xs font-bold text-emerald-700">${(driver?.full_name||session?.user?.email||'?')[0].toUpperCase()}</span></div></div></header><main class="flex-1 overflow-y-auto p-4 relative">${showApp?(contentMap[active]||contentMap.offers)():renderPendingScreen()}</main>${showApp?`<nav class="bg-white border-t border-gray-200 flex shrink-0">${tabs.map(tab=>{const isActive=tab.id===active;const badge=tab.id==='offers'&&offersCount>0?`<span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">${offersCount}</span>`:'';return`<a href="#tab=${tab.id}" class="relative flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${isActive?'text-emerald-600':'text-gray-400 hover:text-gray-600'}"><span class="relative"><svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${isActive?2.5:1.8}" stroke-linecap="round" stroke-linejoin="round">${iconsSvg[tab.icon]}</svg>${badge}</span><span>${tab.label}</span></a>`}).join('')}</nav>`:''}</div>`
-  bindEvents(active, showApp)
+  const isApproved = driver?.status === 'approved'
+  const showMainApp = !loading && isApproved
+  let mainContent
+  if (loading) mainContent = renderAppLoading()
+  else if (isApproved) mainContent = ({offers:()=>renderOffersContent(),jobs:()=>renderJobsContent(),schedule:()=>renderScheduleContent(),settings:()=>renderSettingsContent()}[active]||renderOffersContent)()
+  else mainContent = renderPendingScreen()
+  document.querySelector('#app').innerHTML = `<div class="flex flex-col h-dvh max-w-md mx-auto bg-gray-50 shadow-xl relative overflow-hidden"><header class="bg-white border-b border-gray-100 px-5 pt-12 pb-3 shrink-0"><div class="flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="text-lg font-bold text-emerald-700">Opek</span><span class="text-lg font-bold text-gray-400">Driver</span></div><div class="w-7 h-7 bg-emerald-100 rounded-full flex items-center justify-center"><span class="text-xs font-bold text-emerald-700">${(driver?.full_name||session?.user?.email||'?')[0].toUpperCase()}</span></div></div></header><main class="flex-1 overflow-y-auto p-4 relative">${mainContent}</main>${showMainApp?`<nav class="bg-white border-t border-gray-200 flex shrink-0">${tabs.map(tab=>{const isActive=tab.id===active;const badge=tab.id==='offers'&&offersCount>0?`<span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">${offersCount}</span>`:'';return`<a href="#tab=${tab.id}" class="relative flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${isActive?'text-emerald-600':'text-gray-400 hover:text-gray-600'}"><span class="relative"><svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${isActive?2.5:1.8}" stroke-linecap="round" stroke-linejoin="round">${iconsSvg[tab.icon]}</svg>${badge}</span><span>${tab.label}</span></a>`}).join('')}</nav>`:''}</div>`
+  bindEvents(active, showMainApp)
 }
 
 function bindEvents(active, showApp = true) {
   if (!showApp) { const b = document.getElementById('logout-btn'); if (b) b.addEventListener('click', async () => { await supabase.auth.signOut(); session = null; driver = null; window.location.hash = ''; renderLoginPage() }); return }
   if (active === 'offers' && !loading) {
-    document.querySelectorAll('.accept-offer-btn').forEach(btn=>btn.addEventListener('click',async(e)=>{e.stopPropagation();const id=btn.dataset.assignmentId;btn.disabled=true;const{error}=await supabase.rpc('accept_job_assignment',{p_assignment_id:id});if(error)alert(error.message);await loadDriverData();window.location.hash='tab=jobs'}))
+    document.querySelectorAll('.accept-offer-btn').forEach(btn=>btn.addEventListener('click',async(e)=>{e.stopPropagation();const id=btn.dataset.assignmentId;btn.disabled=true;const{error}=await supabase.rpc('accept_job_assignment',{p_assignment_id:id});if(error){alert(error.message);btn.disabled=false;return};await loadDriverData();window.location.hash='tab=jobs'}))
     document.querySelectorAll('.decline-offer-btn').forEach(btn=>btn.addEventListener('click',async(e)=>{e.stopPropagation();const id=btn.dataset.assignmentId;if(!confirm('Decline this job offer?'))return;btn.disabled=true;const{error}=await supabase.rpc('decline_job_assignment',{p_assignment_id:id});if(error)alert(error.message);await loadDriverData()}))
   }
   if (active === 'jobs' && !loading && getAcceptedJobs().length) document.querySelectorAll('.job-card').forEach(c=>c.addEventListener('click',()=>{const id=c.dataset.bookingId;const aid=c.dataset.assignmentId;selectedBooking=bookingsById[id];selectedAssignment=aid?assignments.find(a=>a.id===aid):null;if(selectedBooking)showBookingDetail()}))
   if (active === 'schedule') {
-    document.getElementById('prev-month').addEventListener('click',()=>{scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth()-1,1);renderApp()})
-    document.getElementById('next-month').addEventListener('click',()=>{scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth()+1,1);renderApp()})
+    document.getElementById('prev-month')?.addEventListener('click',()=>{scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth()-1,1);renderApp()})
+    document.getElementById('next-month')?.addEventListener('click',()=>{scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth()+1,1);renderApp()})
     document.querySelectorAll('[data-date]').forEach(c=>c.addEventListener('click',()=>{scheduleSelectedDate=c.dataset.date;renderApp()}))
     document.querySelectorAll('.schedule-job-card').forEach(c=>c.addEventListener('click',()=>{const id=c.dataset.bookingId;selectedBooking=bookingsById[id];selectedAssignment=assignments.find(a=>a.booking_id===id&&(a.status==='accepted'||a.status==='completed'))||null;if(selectedBooking)showBookingDetail()}))
   }
@@ -253,14 +272,16 @@ function closeBookingDetail() { const d = document.querySelector('main .animate-
 function render() { renderApp() }
 
 async function init() {
+  loading = true
   const { data } = await supabase.auth.getSession()
   session = data.session
-  if (session) { renderApp(); loadDriverData() }
-  else renderLoginPage()
-  supabase.auth.onAuthStateChange((_event, newSession) => {
+  if (session) { await loadDriverData() }
+  else { loading = false; renderLoginPage() }
+  supabase.auth.onAuthStateChange(async (event, newSession) => {
+    if (event === 'INITIAL_SESSION') return
     session = newSession
-    if (session) { renderApp(); loadDriverData() }
-    else { driver = null; window.location.hash = ''; renderLoginPage() }
+    if (session) { await loadDriverData() }
+    else { loading = false; driver = null; assignments = []; bookingsById = {}; window.location.hash = ''; renderLoginPage() }
   })
 }
 
