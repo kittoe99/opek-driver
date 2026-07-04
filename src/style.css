@@ -67,7 +67,7 @@
   height: 1.5rem;
   background: #355070;
   border-radius: 1px;
-  transform: skewX(-10deg);
+  transform: skewX(8deg);
   transform-origin: bottom;
 }
 
