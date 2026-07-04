@@ -1,5 +1,14 @@
 @import "tailwindcss";
 
+@theme {
+  --color-brand: #ff006e;
+  --color-brand-50: #fff0f6;
+  --color-brand-100: #ffd6e6;
+  --color-brand-200: #ffb3d1;
+  --color-brand-700: #b30049;
+  --color-secondary: #355070;
+}
+
 @keyframes slide-up {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }
