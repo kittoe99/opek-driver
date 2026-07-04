@@ -1,4 +1,5 @@
 import './style.css'
+import 'leaflet/dist/leaflet.css'
 import { createClient } from '@supabase/supabase-js'
 import L from 'leaflet'
 delete L.Icon.Default.prototype._getIconUrl
