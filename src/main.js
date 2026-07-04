@@ -22,9 +22,9 @@ if (!supabaseUrl || !supabaseAnonKey) {
 const supabase = createClient(supabaseUrl, supabaseAnonKey)
 
 const tabs = [
+  { id: 'offers', label: 'Offers', icon: 'bell' },
   { id: 'jobs', label: 'Jobs', icon: 'briefcase' },
   { id: 'schedule', label: 'Schedule', icon: 'calendar' },
-  { id: 'pay', label: 'Pay', icon: 'wallet' },
   { id: 'settings', label: 'Settings', icon: 'cog' },
 ]
 
@@ -58,15 +58,37 @@ const iconsSvg = {
   checkCircle: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="22 4 12 14.01 9 11.01" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   clock: '<circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="12 6 12 12 16 14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
   package: '<path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><polyline points="3.27 6.96 12 12.01 20.73 6.96" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="22.08" x2="12" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
+  bell: '<path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M13.73 21a2 2 0 0 1-3.46 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>',
 }
 
 let session = null
-let bookings = []
+let driver = null
+let serviceAreas = []
+let assignments = []
+let bookingsById = {}
 let loading = true
 let authView = 'login'
 let selectedBooking = null
+let selectedAssignment = null
 let scheduleMonth = new Date()
 let scheduleSelectedDate = null
+
+const assignmentStatusConfig = {
+  offered: { bg: 'bg-amber-50', text: 'text-amber-700', border: 'border-l-amber-500' },
+  accepted: { bg: 'bg-blue-50', text: 'text-blue-700', border: 'border-l-blue-500' },
+  completed: { bg: 'bg-emerald-50', text: 'text-emerald-700', border: 'border-l-emerald-500' },
+  declined: { bg: 'bg-red-50', text: 'text-red-700', border: 'border-l-red-500' },
+  cancelled: { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-l-gray-400' },
+}
+
+function parseStatesInput(value) {
+  return value.split(/[,;\s]+/).map(s => s.trim().toUpperCase()).filter(s => s.length === 2)
+}
+
+function getOffers() { return assignments.filter(a => a.status === 'offered') }
+function getAcceptedJobs() { return assignments.filter(a => a.status === 'accepted' || a.status === 'completed') }
+function getAcceptedBookings() { return getAcceptedJobs().map(a => bookingsById[a.booking_id]).filter(Boolean) }
+function getBookingForAssignment(assignment) { return bookingsById[assignment?.booking_id] }
 
 function formatDate(dateStr) {
   if (!dateStr) return ''
@@ -80,74 +102,58 @@ function formatDateTime(isoStr) {
   return d.toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-function formatMonth(date) {
-  return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
-}
-
+function formatMonth(date) { return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }) }
 function getDaysInMonth(year, month) { return new Date(year, month + 1, 0).getDate() }
 function getFirstDayOfMonth(year, month) { return new Date(year, month, 1).getDay() }
-function getBookingsForDate(dateStr) { return bookings.filter(b => b.booking_details?.preferred_date === dateStr) }
-
+function getBookingsForDate(dateStr) { return getAcceptedBookings().filter(b => b.booking_details?.preferred_date === dateStr) }
 function groupBookingsByDate() {
   const map = {}
-  bookings.forEach(b => { const d = b.booking_details?.preferred_date; if (d) { if (!map[d]) map[d] = []; map[d].push(b) } })
+  getAcceptedBookings().forEach(b => { const d = b.booking_details?.preferred_date; if (d) { if (!map[d]) map[d] = []; map[d].push(b) } })
   return map
 }
+function isSameDay(d1, d2) { return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate() }
 
-function isSameDay(d1, d2) {
-  return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate()
-}
-
-function jobCard(booking) {
+function jobCard(booking, assignment) {
   const { id, order_number, customer_info, location_info, booking_details, status } = booking
   const sc = statusConfig[status] || statusConfig.pending
   const serviceBadge = serviceTypeConfig[booking_details?.service_type] || 'bg-gray-100 text-gray-700'
   const hasPhoto = booking_details?.photo_url
-  return `<div class="job-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-3 border-l-4 ${sc.border} active:scale-[0.98] transition-transform cursor-pointer" data-booking-id="${id}"><div class="p-4"><div class="flex items-start justify-between mb-2"><div class="flex items-center gap-2"><span class="text-sm font-bold text-gray-800 tracking-tight">${location_info?.city || order_number || ''}</span><span class="text-xs px-2 py-0.5 rounded-full font-medium ${sc.bg} ${sc.text} capitalize">${(status||'pending').replace('_',' ')}</span></div><span class="text-lg font-bold text-gray-900">$${booking_details?.price||0}</span></div><div class="flex items-start gap-3 mb-3">${hasPhoto?`<img src="${booking_details.photo_url}" class="w-12 h-12 rounded-lg object-cover shrink-0" alt="" loading="lazy" />`:`<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0"><svg class="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`}<div class="min-w-0"><p class="font-semibold text-gray-800 truncate">${customer_info?.name||'Unknown'}</p><span class="inline-block text-xs px-1.5 py-0.5 rounded font-medium mt-1 ${serviceBadge}">${booking_details?.service_type||'Service'}</span></div></div><div class="flex items-center gap-4 text-xs text-gray-500"><div class="flex items-center gap-1 truncate"><svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="truncate">${location_info?.city||''}, ${location_info?.state||''}</span></div><div class="flex items-center gap-1 shrink-0"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>${formatDate(booking_details?.preferred_date)}</span></div><div class="flex items-center gap-1 shrink-0"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>${booking_details?.preferred_time||''}</span></div></div></div></div>`
+  const aa = assignment ? ` data-assignment-id="${assignment.id}"` : ''
+  return `<div class="job-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-3 border-l-4 ${sc.border} active:scale-[0.98] transition-transform cursor-pointer" data-booking-id="${id}"${aa}><div class="p-4"><div class="flex items-start justify-between mb-2"><div class="flex items-center gap-2"><span class="text-sm font-bold text-gray-800 tracking-tight">${location_info?.city||order_number||''}</span><span class="text-xs px-2 py-0.5 rounded-full font-medium ${sc.bg} ${sc.text} capitalize">${(status||'pending').replace('_',' ')}</span></div><span class="text-lg font-bold text-gray-900">$${booking_details?.price||0}</span></div><div class="flex items-start gap-3 mb-3">${hasPhoto?`<img src="${booking_details.photo_url}" class="w-12 h-12 rounded-lg object-cover shrink-0" alt="" loading="lazy" />`:`<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0"><svg class="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`}<div class="min-w-0"><p class="font-semibold text-gray-800 truncate">${customer_info?.name||'Unknown'}</p><span class="inline-block text-xs px-1.5 py-0.5 rounded font-medium mt-1 ${serviceBadge}">${booking_details?.service_type||'Service'}</span></div></div><div class="flex items-center gap-4 text-xs text-gray-500"><div class="flex items-center gap-1 truncate"><svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="truncate">${location_info?.city||''}, ${location_info?.state||''}</span></div><div class="flex items-center gap-1 shrink-0"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>${formatDate(booking_details?.preferred_date)}</span></div><div class="flex items-center gap-1 shrink-0"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>${booking_details?.preferred_time||''}</span></div></div></div></div>`
 }
 
-function renderBookingDetail(booking) {
+function renderBookingDetail(booking, assignment) {
   const { order_number, customer_info, location_info, booking_details, status, created_at } = booking
   const sc = statusConfig[status] || statusConfig.pending
   const serviceBadge = serviceTypeConfig[booking_details?.service_type] || 'bg-gray-100 text-gray-700'
-  const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent([location_info?.address||'', location_info?.unit_number||'', location_info?.city||'', location_info?.state||'', location_info?.zip_code||''].filter(Boolean).join(' '))}`
-  return `<div class="absolute inset-0 z-20 bg-gray-50 flex flex-col animate-slide-up"><header class="bg-white border-b border-gray-100 px-5 pt-12 pb-3 shrink-0"><div class="flex items-center gap-3"><button id="close-detail" class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center active:scale-90 transition-transform"><svg class="w-5 h-5 text-gray-600" viewBox="0 0 24 24">${iconsSvg.chevronLeft}</svg></button><div><span class="text-sm font-bold text-gray-800">${order_number||''}</span><span class="text-xs ml-2 px-2 py-0.5 rounded-full font-semibold ${sc.bg} ${sc.text} capitalize">${(status||'pending').replace('_',' ')}</span></div></div></header><main class="flex-1 overflow-y-auto">${booking_details?.photo_url?`<div class="h-48 bg-gray-200"><img src="${booking_details.photo_url}" class="w-full h-full object-cover" alt="" /></div>`:''}<div class="p-4 space-y-4"><div class="flex items-center justify-between bg-white rounded-xl p-4 shadow-sm border border-gray-100"><span class="text-xs px-2.5 py-1 rounded-full font-medium ${serviceBadge}">${booking_details?.service_type||'Service'}</span><span class="text-xl font-bold text-gray-900">$${booking_details?.price||0}</span></div><div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Customer</h3><p class="text-base font-semibold text-gray-800">${customer_info?.name||'Unknown'}</p>${customer_info?.email?`<a href="mailto:${customer_info.email}" class="flex items-center gap-2 text-sm text-gray-500 mt-2"><svg class="w-4 h-4" viewBox="0 0 24 24">${iconsSvg.mail}</svg><span>${customer_info.email}</span></a>`:''}${customer_info?.phone?`<a href="tel:${customer_info.phone.replace(/[^0-9+]/g,'')}" class="flex items-center gap-2 text-sm text-gray-500 mt-1.5"><svg class="w-4 h-4" viewBox="0 0 24 24">${iconsSvg.phone}</svg><span>${customer_info.phone}</span></a>`:''}</div><div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Location</h3><a href="${mapsUrl}" target="_blank" rel="noopener" class="block text-sm text-emerald-600 hover:text-emerald-700 active:text-emerald-800 transition"><p>${location_info?.address||''}${location_info?.unit_number?' '+location_info.unit_number:''}</p><p>${location_info?.city||''}, ${location_info?.state||''} ${location_info?.zip_code||''}</p></a></div>${booking_details?.preferred_date||booking_details?.preferred_time?`<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Schedule</h3>${booking_details?.preferred_date?`<div class="flex items-center gap-2 text-sm text-gray-700"><svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24">${iconsSvg.calendar}</svg><span>${formatDate(booking_details.preferred_date)}</span></div>`:''}${booking_details?.preferred_time?`<div class="flex items-center gap-2 text-sm text-gray-700 mt-2"><svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24">${iconsSvg.clock}</svg><span>${booking_details.preferred_time}</span></div>`:''}</div>`:''}${booking_details?.estimated_items&&booking_details.estimated_items.length?`<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Items</h3>${booking_details.estimated_items.map(item=>`<div class="flex items-center gap-2 text-sm text-gray-700"><svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24">${iconsSvg.package}</svg><span>${item}</span></div>`).join('')}${booking_details?.estimated_volume?`<p class="text-xs text-gray-400 mt-2">${booking_details.estimated_volume}</p>`:''}</div>`:''}${booking_details?.estimate_summary?`<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Pricing</h3><p class="text-sm text-gray-700">${booking_details.estimate_summary}</p></div>`:''}${booking_details?.deposit_paid!=null?`<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Deposit</h3><div class="flex items-center gap-2"><svg class="w-4 h-4 ${booking_details.deposit_paid?'text-emerald-500':'text-amber-500'}" viewBox="0 0 24 24">${iconsSvg.checkCircle}</svg><span class="text-sm font-medium ${booking_details.deposit_paid?'text-emerald-600':'text-amber-600'}">${booking_details.deposit_paid?'$'+(booking_details.deposit_amount||0)+' paid':'Not paid'}</span></div></div>`:''}<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Details</h3><p class="text-sm text-gray-700 whitespace-pre-wrap">${booking_details?.details||'No additional details'}</p></div><p class="text-xs text-gray-400 text-center pb-4">Created ${formatDateTime(created_at)}</p></div></main></div>`
+  const mapsUrl = `https://maps.google.com/?q=${encodeURIComponent([location_info?.address||'',location_info?.unit_number||'',location_info?.city||'',location_info?.state||'',location_info?.zip_code||''].filter(Boolean).join(' '))}`
+  return `<div class="absolute inset-0 z-20 bg-gray-50 flex flex-col animate-slide-up"><header class="bg-emerald-700 text-white px-5 pt-12 pb-4 shrink-0"><div class="flex items-center gap-3"><button id="close-detail" class="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center active:scale-90 transition-transform"><svg class="w-5 h-5" viewBox="0 0 24 24">${iconsSvg.chevronLeft}</svg></button><div><h1 class="text-lg font-bold leading-tight">${order_number||''}</h1><p class="text-emerald-200 text-xs">Booking Details</p></div></div></header><main class="flex-1 overflow-y-auto">${booking_details?.photo_url?`<div class="h-48 bg-gray-200"><img src="${booking_details.photo_url}" class="w-full h-full object-cover" alt="" /></div>`:''}<div class="p-4 space-y-4"><div class="flex items-center justify-between bg-white rounded-xl p-4 shadow-sm border border-gray-100"><div class="flex items-center gap-3"><span class="text-xs px-2.5 py-1 rounded-full font-semibold ${sc.bg} ${sc.text} capitalize">${(status||'pending').replace('_',' ')}</span><span class="text-xs px-2.5 py-1 rounded-full font-medium ${serviceBadge}">${booking_details?.service_type||'Service'}</span></div><span class="text-xl font-bold text-gray-900">$${booking_details?.price||0}</span></div><div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Customer</h3><p class="text-base font-semibold text-gray-800">${customer_info?.name||'Unknown'}</p>${customer_info?.email?`<a href="mailto:${customer_info.email}" class="flex items-center gap-2 text-sm text-gray-500 mt-2"><svg class="w-4 h-4" viewBox="0 0 24 24">${iconsSvg.mail}</svg><span>${customer_info.email}</span></a>`:''}${customer_info?.phone?`<a href="tel:${customer_info.phone.replace(/[^0-9+]/g,'')}" class="flex items-center gap-2 text-sm text-gray-500 mt-1.5"><svg class="w-4 h-4" viewBox="0 0 24 24">${iconsSvg.phone}</svg><span>${customer_info.phone}</span></a>`:''}</div><div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Location</h3><a href="${mapsUrl}" target="_blank" rel="noopener" class="block text-sm text-emerald-600 hover:text-emerald-700 active:text-emerald-800 transition"><p>${location_info?.address||''}${location_info?.unit_number?' '+location_info.unit_number:''}</p><p>${location_info?.city||''}, ${location_info?.state||''} ${location_info?.zip_code||''}</p></a></div>${booking_details?.preferred_date||booking_details?.preferred_time?`<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Schedule</h3>${booking_details?.preferred_date?`<div class="flex items-center gap-2 text-sm text-gray-700"><svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24">${iconsSvg.calendar}</svg><span>${formatDate(booking_details.preferred_date)}</span></div>`:''}${booking_details?.preferred_time?`<div class="flex items-center gap-2 text-sm text-gray-700 mt-2"><svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24">${iconsSvg.clock}</svg><span>${booking_details.preferred_time}</span></div>`:''}</div>`:''}${booking_details?.estimated_items&&booking_details.estimated_items.length?`<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Items</h3>${booking_details.estimated_items.map(i=>`<div class="flex items-center gap-2 text-sm text-gray-700"><svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24">${iconsSvg.package}</svg><span>${i}</span></div>`).join('')}${booking_details?.estimated_volume?`<p class="text-xs text-gray-400 mt-2">${booking_details.estimated_volume}</p>`:''}</div>`:''}${booking_details?.estimate_summary?`<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Pricing</h3><p class="text-sm text-gray-700">${booking_details.estimate_summary}</p></div>`:''}${booking_details?.deposit_paid!=null?`<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Deposit</h3><div class="flex items-center gap-2"><svg class="w-4 h-4 ${booking_details.deposit_paid?'text-emerald-500':'text-amber-500'}" viewBox="0 0 24 24">${iconsSvg.checkCircle}</svg><span class="text-sm font-medium ${booking_details.deposit_paid?'text-emerald-600':'text-amber-600'}">${booking_details.deposit_paid?'$'+(booking_details.deposit_amount||0)+' paid':'Not paid'}</span></div></div>`:''}<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Details</h3><p class="text-sm text-gray-700 whitespace-pre-wrap">${booking_details?.details||'No additional details'}</p></div><p class="text-xs text-gray-400 text-center pb-4">Created ${formatDateTime(created_at)}</p>${assignment?.status==='accepted'?`<button id="complete-job-btn" class="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition text-sm mb-4">Mark job complete</button>`:''}</div></main></div>`
 }
 
-async function loadBookings() {
-  const { data, error } = await supabase.from('bookings').select('*').order('created_at', { ascending: false })
-  if (!error) bookings = data || []
-  loading = false
-  render()
+async function loadDriverData() {
+  loading = true; render()
+  const { data: driverRow } = await supabase.from('drivers').select('*').maybeSingle()
+  driver = driverRow
+  if (driver) { const { data: areas } = await supabase.from('driver_service_areas').select('state').order('state'); serviceAreas = (areas||[]).map(a=>a.state) }
+  else { serviceAreas = [] }
+  if (!driver || driver.status !== 'approved') { assignments = []; bookingsById = {}; loading = false; render(); return }
+  const { data: assignmentRows } = await supabase.from('job_assignments').select('*').order('assigned_at',{ascending:false})
+  assignments = assignmentRows || []
+  const bookingIds = [...new Set(assignments.map(a=>a.booking_id))]
+  if (bookingIds.length) { const { data: bookingRows } = await supabase.from('bookings').select('*').in('id',bookingIds); bookingsById = Object.fromEntries((bookingRows||[]).map(b=>[b.id,b])) }
+  else { bookingsById = {} }
+  loading = false; render()
 }
 
 function renderLoginPage() {
-  document.querySelector('#app').innerHTML = `<div class="flex flex-col h-dvh max-w-md mx-auto bg-emerald-700 relative overflow-hidden"><div class="absolute top-0 left-0 right-0 h-64 bg-emerald-700"></div><div class="absolute bottom-0 left-0 right-0 h-1/2 bg-gray-50"></div><div class="relative z-10 flex flex-col h-full"><div class="pt-20 pb-8 px-8 text-center text-white"><div class="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"><svg class="w-8 h-8" viewBox="0 0 24 24">${iconsSvg.package}</svg></div><h1 class="text-2xl font-bold">Opek Junk Removal</h1><p class="text-emerald-200 text-sm mt-1">Driver Dashboard</p></div><div class="flex-1 flex flex-col px-6 justify-center"><div class="bg-white rounded-2xl shadow-xl p-6">${authView==='login'?`<h2 class="text-lg font-bold text-gray-800 mb-6">Sign In</h2><form id="login-form" class="space-y-4"><div><label class="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" id="login-email" placeholder="you@example.com" required class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div><div><label class="block text-xs font-medium text-gray-600 mb-1">Password</label><input type="password" id="login-password" placeholder="Enter your password" required class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div><p id="login-error" class="text-red-500 text-xs hidden"></p><button type="submit" class="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition text-sm">Sign In</button></form><p class="text-center text-xs text-gray-500 mt-4">Don't have an account? <a href="#" id="switch-to-signup" class="text-emerald-600 font-medium">Sign Up</a></p>`:`<h2 class="text-lg font-bold text-gray-800 mb-6">Create Account</h2><form id="signup-form" class="space-y-4"><div><label class="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" id="signup-email" placeholder="you@example.com" required class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div><div><label class="block text-xs font-medium text-gray-600 mb-1">Password</label><input type="password" id="signup-password" placeholder="Min. 6 characters" required minlength="6" class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div><p id="signup-error" class="text-red-500 text-xs hidden"></p><button type="submit" class="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition text-sm">Create Account</button></form><p class="text-center text-xs text-gray-500 mt-4">Already have an account? <a href="#" id="switch-to-login" class="text-emerald-600 font-medium">Sign In</a></p>`}</div></div><p class="text-center text-xs text-gray-400 pb-6">Opek Junk Removal &copy; 2026</p></div></div>`
-
+  document.querySelector('#app').innerHTML = `<div class="flex flex-col h-dvh max-w-md mx-auto bg-emerald-700 relative overflow-hidden"><div class="absolute top-0 left-0 right-0 h-64 bg-emerald-700"></div><div class="absolute bottom-0 left-0 right-0 h-1/2 bg-gray-50"></div><div class="relative z-10 flex flex-col h-full"><div class="pt-20 pb-8 px-8 text-center text-white"><div class="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"><svg class="w-8 h-8" viewBox="0 0 24 24">${iconsSvg.package}</svg></div><h1 class="text-2xl font-bold">Opek Junk Removal</h1><p class="text-emerald-200 text-sm mt-1">Driver Dashboard</p></div><div class="flex-1 flex flex-col px-6 justify-center"><div class="bg-white rounded-2xl shadow-xl p-6">${authView==='login'?`<h2 class="text-lg font-bold text-gray-800 mb-6">Sign In</h2><form id="login-form" class="space-y-4"><div><label class="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" id="login-email" placeholder="you@example.com" required class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div><div><label class="block text-xs font-medium text-gray-600 mb-1">Password</label><input type="password" id="login-password" placeholder="Enter your password" required class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div><p id="login-error" class="text-red-500 text-xs hidden"></p><button type="submit" class="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition text-sm">Sign In</button></form><p class="text-center text-xs text-gray-500 mt-4">Don't have an account? <a href="#" id="switch-to-signup" class="text-emerald-600 font-medium">Sign Up</a></p>`:`<h2 class="text-lg font-bold text-gray-800 mb-6">Create Account</h2><form id="signup-form" class="space-y-4"><div><label class="block text-xs font-medium text-gray-600 mb-1">Full name</label><input type="text" id="signup-name" placeholder="Your name" required class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div><div><label class="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" id="signup-email" placeholder="you@example.com" required class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div><div><label class="block text-xs font-medium text-gray-600 mb-1">Phone</label><input type="tel" id="signup-phone" placeholder="(555) 555-5555" class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div><div><label class="block text-xs font-medium text-gray-600 mb-1">Service states</label><input type="text" id="signup-states" placeholder="CA, NV, AZ" required class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /><p class="text-xs text-gray-400 mt-1">Comma-separated 2-letter state codes you cover</p></div><div><label class="block text-xs font-medium text-gray-600 mb-1">Password</label><input type="password" id="signup-password" placeholder="Min. 6 characters" required minlength="6" class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div><p id="signup-error" class="text-red-500 text-xs hidden"></p><button type="submit" class="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition text-sm">Create Account</button></form><p class="text-center text-xs text-gray-500 mt-4">Already have an account? <a href="#" id="switch-to-login" class="text-emerald-600 font-medium">Sign In</a></p>`}</div></div><p class="text-center text-xs text-gray-400 pb-6">Opek Junk Removal &copy; 2026</p></div></div>`
   setTimeout(() => {
     if (authView === 'login') {
       const f = document.getElementById('login-form'); const e = document.getElementById('login-error')
-      f.addEventListener('submit', async (ev) => {
-        ev.preventDefault(); const email = document.getElementById('login-email').value; const pw = document.getElementById('login-password').value
-        e.classList.add('hidden')
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw })
-        if (error) { e.textContent = error.message; e.classList.remove('hidden') }
-        else { session = data.session; renderApp() }
-      })
+      f.addEventListener('submit', async (ev) => { ev.preventDefault(); const em = document.getElementById('login-email').value; const pw = document.getElementById('login-password').value; e.classList.add('hidden'); const { data, error } = await supabase.auth.signInWithPassword({ email: em, password: pw }); if (error) { e.textContent = error.message; e.classList.remove('hidden') } else { session = data.session; renderApp(); loadDriverData() } })
     } else {
       const f = document.getElementById('signup-form'); const e = document.getElementById('signup-error')
-      f.addEventListener('submit', async (ev) => {
-        ev.preventDefault(); const email = document.getElementById('signup-email').value; const pw = document.getElementById('signup-password').value
-        e.classList.add('hidden')
-        const { data, error } = await supabase.auth.signUp({ email, password: pw })
-        if (error) { e.textContent = error.message; e.classList.remove('hidden') }
-        else {
-          await supabase.from('crm_admins').insert({ email }).select()
-          session = data.session
-          if (session) renderApp()
-          else { e.textContent = 'Check your email to confirm your account.'; e.classList.remove('hidden') }
-        }
-      })
+      f.addEventListener('submit', async (ev) => { ev.preventDefault(); const em = document.getElementById('signup-email').value; const pw = document.getElementById('signup-password').value; const nm = document.getElementById('signup-name').value; const ph = document.getElementById('signup-phone').value; const st = parseStatesInput(document.getElementById('signup-states').value); e.classList.add('hidden'); const { data, error } = await supabase.auth.signUp({ email: em, password: pw }); if (error) { e.textContent = error.message; e.classList.remove('hidden') } else { session = data.session; if (session) { const { error: regError } = await supabase.rpc('register_driver', { p_full_name: nm, p_phone: ph, p_states: st }); if (regError) { e.textContent = regError.message; e.classList.remove('hidden'); return }; await loadDriverData() } else { e.textContent = 'Check your email to confirm your account, then sign in.'; e.classList.remove('hidden') } } })
     }
     const ssu = document.getElementById('switch-to-signup'); const sli = document.getElementById('switch-to-login')
     if (ssu) ssu.addEventListener('click', (ev) => { ev.preventDefault(); authView = 'signup'; renderLoginPage() })
@@ -155,35 +161,49 @@ function renderLoginPage() {
   }, 0)
 }
 
-function renderEmptyState(label) {
-  const iconMap = { Jobs: iconsSvg.briefcase, Schedule: iconsSvg.calendar, Pay: iconsSvg.wallet, Settings: iconsSvg.cog }
-  return `<div class="flex flex-col items-center justify-center h-full text-gray-400 px-6 py-12"><svg class="w-16 h-16 mb-4 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">${iconMap[label]||iconMap['Jobs']}</svg><p class="text-lg font-medium text-gray-500">No ${label.toLowerCase()} yet</p><p class="text-sm text-gray-400 mt-1">Your ${label.toLowerCase()} will appear here</p></div>`
+function renderEmptyState(label, hint) {
+  const iconMap = { Offers: iconsSvg.bell, Jobs: iconsSvg.briefcase, Schedule: iconsSvg.calendar, Settings: iconsSvg.cog }
+  return `<div class="flex flex-col items-center justify-center h-full text-gray-400 px-6 py-12"><svg class="w-16 h-16 mb-4 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">${iconMap[label]||iconMap['Jobs']}</svg><p class="text-lg font-medium text-gray-500">No ${label.toLowerCase()} yet</p><p class="text-sm text-gray-400 mt-1 text-center">${hint||`Your ${label.toLowerCase()} will appear here`}</p></div>`
+}
+
+function renderPendingScreen() {
+  const isPending = driver?.status === 'pending'; const isSuspended = driver?.status === 'suspended'; const noProfile = !driver
+  return `<div class="flex flex-col items-center justify-center h-full px-6 py-12 text-center"><div class="w-16 h-16 rounded-full flex items-center justify-center mb-4 ${isSuspended?'bg-red-100':'bg-amber-100'}"><svg class="w-8 h-8 ${isSuspended?'text-red-600':'text-amber-600'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${iconsSvg.clock}</svg></div><h2 class="text-lg font-bold text-gray-800 mb-2">${noProfile?'Complete your profile':isSuspended?'Account suspended':'Pending approval'}</h2><p class="text-sm text-gray-500 max-w-xs">${noProfile?'Contact support to link your contractor account, or sign out and create a new driver account.':isSuspended?'Your driver account has been suspended. Contact Opek support for help.':'Your application is under review. You will see job offers here once an admin approves your account.'}</p>${driver&&serviceAreas.length?`<p class="text-xs text-gray-400 mt-4">Service areas: ${serviceAreas.join(', ')}</p>`:''}<button id="logout-btn" class="mt-8 text-sm text-red-600 font-medium">Sign out</button></div>`
+}
+
+function offerCard(assignment) {
+  const booking = getBookingForAssignment(assignment)
+  if (!booking) return ''
+  const sc = assignmentStatusConfig.offered
+  const serviceBadge = serviceTypeConfig[booking.booking_details?.service_type] || 'bg-gray-100 text-gray-700'
+  return `<div class="offer-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-3 border-l-4 ${sc.border}" data-assignment-id="${assignment.id}"><div class="p-4"><div class="flex items-start justify-between mb-2"><div class="flex items-center gap-2"><span class="text-xs px-2 py-0.5 rounded-full font-medium ${sc.bg} ${sc.text}">New offer</span><span class="text-sm font-bold text-gray-800">${booking.location_info?.city||booking.order_number||''}</span></div><span class="text-lg font-bold text-gray-900">$${booking.booking_details?.price||0}</span></div><p class="font-semibold text-gray-800 mb-1">${booking.customer_info?.name||'Unknown'}</p><span class="inline-block text-xs px-1.5 py-0.5 rounded font-medium ${serviceBadge}">${booking.booking_details?.service_type||'Service'}</span><p class="text-xs text-gray-500 mt-2">${booking.location_info?.city||''}, ${booking.location_info?.state||''}</p><p class="text-xs text-gray-500">${formatDate(booking.booking_details?.preferred_date)} &middot; ${booking.booking_details?.preferred_time||''}</p>${assignment.note?`<p class="text-xs text-gray-400 mt-2 italic">"${assignment.note}"</p>`:''}<div class="flex gap-2 mt-4"><button class="accept-offer-btn flex-1 bg-emerald-600 text-white font-semibold py-2.5 rounded-xl text-sm active:scale-[0.98] transition" data-assignment-id="${assignment.id}">Accept</button><button class="decline-offer-btn flex-1 bg-gray-100 text-gray-700 font-semibold py-2.5 rounded-xl text-sm active:scale-[0.98] transition" data-assignment-id="${assignment.id}">Decline</button></div></div></div>`
+}
+
+function renderOffersContent() {
+  if (loading) return [1,2].map(()=>'<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 animate-pulse mb-3"><div class="h-4 bg-gray-200 rounded w-24 mb-3"></div><div class="h-4 bg-gray-200 rounded w-32 mb-2"></div><div class="h-8 bg-gray-200 rounded w-full mt-4"></div></div>').join('')
+  const offers = getOffers()
+  if (!offers.length) return renderEmptyState('Offers','New job offers from dispatch will appear here')
+  return `<div class="mb-4"><span class="text-sm text-gray-500 font-medium">${offers.length} pending offer${offers.length!==1?'s':''}</span></div>${offers.map(a=>offerCard(a)).join('')}`
 }
 
 function renderJobsContent() {
   if (loading) return [1,2,3].map(()=>'<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 animate-pulse mb-3"><div class="flex justify-between mb-3"><div class="h-4 bg-gray-200 rounded w-24"></div><div class="h-4 bg-gray-200 rounded w-12"></div></div><div class="flex gap-3 mb-3"><div class="h-12 w-12 bg-gray-200 rounded-lg shrink-0"></div><div class="flex-1"><div class="h-4 bg-gray-200 rounded w-32 mb-2"></div><div class="h-3 bg-gray-200 rounded w-20"></div></div></div><div class="flex gap-3"><div class="h-3 bg-gray-200 rounded w-16"></div><div class="h-3 bg-gray-200 rounded w-20"></div><div class="h-3 bg-gray-200 rounded w-28"></div></div></div>').join('')
-  if (!bookings.length) return renderEmptyState('Jobs')
-  return `<div class="mb-4 flex items-center justify-between"><span class="text-sm text-gray-500 font-medium">${bookings.length} booking${bookings.length!==1?'s':''}</span><div class="flex gap-1"><button class="text-xs px-2.5 py-1 rounded-full bg-white border border-gray-200 text-gray-600 font-medium shadow-sm">All</button><button class="text-xs px-2.5 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-700 font-medium">Pending</button><button class="text-xs px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-medium">Completed</button></div></div>${bookings.map(b=>jobCard(b)).join('')}`
+  if (!getAcceptedBookings().length) return renderEmptyState('Jobs','Accepted jobs will appear here')
+  const accepted = getAcceptedJobs()
+  return `<div class="mb-4 flex items-center justify-between"><span class="text-sm text-gray-500 font-medium">${accepted.length} job${accepted.length!==1?'s':''}</span></div>${accepted.map(a=>{const b=getBookingForAssignment(a);return b?jobCard(b,a):''}).join('')}`
 }
 
 function renderScheduleContent() {
   const bookingsByDate = groupBookingsByDate()
-  const upcoming = bookings.filter(b=>b.booking_details?.preferred_date).sort((a,b)=>a.booking_details.preferred_date.localeCompare(b.booking_details.preferred_date)).filter(b=>b.booking_details.preferred_date>=new Date().toISOString().slice(0,10))
+  const upcoming = getAcceptedBookings().filter(b=>b.booking_details?.preferred_date).sort((a,b)=>a.booking_details.preferred_date.localeCompare(b.booking_details.preferred_date)).filter(b=>b.booking_details.preferred_date>=new Date().toISOString().slice(0,10))
   const year = scheduleMonth.getFullYear(); const month = scheduleMonth.getMonth()
-  const daysInMonth = getDaysInMonth(year, month); const firstDay = getFirstDayOfMonth(year, month)
-  const today = new Date()
-  let calendarHTML = ''
-  for (let i = 0; i < firstDay; i++) calendarHTML += '<div class="h-9"></div>'
+  const daysInMonth = getDaysInMonth(year, month); const firstDay = getFirstDayOfMonth(year, month); const today = new Date()
+  let calendarHTML = ''; for (let i = 0; i < firstDay; i++) calendarHTML += '<div class="h-9"></div>'
   for (let day = 1; day <= daysInMonth; day++) {
     const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`
-    const dateBookings = bookingsByDate[dateStr] || []
-    const isToday = isSameDay(new Date(year, month, day), today)
-    const isSelected = scheduleSelectedDate === dateStr
-    const hasJobs = dateBookings.length > 0
+    const dateBookings = bookingsByDate[dateStr] || []; const isToday = isSameDay(new Date(year, month, day), today); const isSelected = scheduleSelectedDate === dateStr; const hasJobs = dateBookings.length > 0
     let cellClass = 'h-9 rounded-lg flex flex-col items-center justify-center text-sm cursor-pointer transition'
-    if (isSelected) cellClass += ' bg-emerald-600 text-white font-bold'
-    else if (isToday) cellClass += ' bg-emerald-100 text-emerald-800 font-bold'
-    else cellClass += ' text-gray-700 hover:bg-gray-100'
+    if (isSelected) cellClass += ' bg-emerald-600 text-white font-bold'; else if (isToday) cellClass += ' bg-emerald-100 text-emerald-800 font-bold'; else cellClass += ' text-gray-700 hover:bg-gray-100'
     calendarHTML += `<div class="${cellClass}" data-date="${dateStr}"><span>${day}</span>${hasJobs?'<span class="w-1 h-1 rounded-full '+(isSelected?'bg-white':'bg-emerald-500')+'"></span>':''}</div>`
   }
   const selectedDateJobs = scheduleSelectedDate ? getBookingsForDate(scheduleSelectedDate) : []
@@ -192,56 +212,57 @@ function renderScheduleContent() {
 }
 
 function renderSettingsContent() {
-  return `<div class="space-y-4 pt-2"><div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-4"><div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold text-lg">${(session.user.email||'?')[0].toUpperCase()}</div><div><p class="font-semibold text-gray-800">${session.user.email}</p><p class="text-xs text-gray-400">Driver</p></div></div><div class="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-50"><button class="w-full flex items-center gap-3 p-4 text-sm text-gray-500 hover:bg-gray-50 transition"><svg class="w-5 h-5" viewBox="0 0 24 24">${iconsSvg.clock}</svg><span>Activity Log</span><svg class="w-4 h-4 ml-auto text-gray-300" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="w-full flex items-center gap-3 p-4 text-sm text-gray-500 hover:bg-gray-50 transition"><svg class="w-5 h-5" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" y1="21" x2="16" y2="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="17" x2="12" y2="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>App Version</span><span class="ml-auto text-xs text-gray-400">1.0.0</span></button></div><button id="logout-btn" class="w-full bg-red-50 text-red-600 font-semibold py-3 rounded-xl hover:bg-red-100 active:scale-[0.98] transition text-sm border border-red-200">Sign Out</button></div>`
+  const statusLabel = driver?.status ? driver.status.charAt(0).toUpperCase()+driver.status.slice(1) : 'Unknown'
+  const statusColor = driver?.status === 'approved' ? 'text-emerald-600' : driver?.status === 'suspended' ? 'text-red-600' : 'text-amber-600'
+  return `<div class="space-y-4 pt-2"><div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-4"><div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold text-lg">${(driver?.full_name||session.user.email||'?')[0].toUpperCase()}</div><div><p class="font-semibold text-gray-800">${driver?.full_name||session.user.email}</p><p class="text-xs ${statusColor} font-medium">${statusLabel} driver</p></div></div>${serviceAreas.length?`<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2">Service areas</h3><p class="text-sm text-gray-700">${serviceAreas.join(', ')}</p></div>`:''}<div class="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-50"><div class="flex items-center gap-3 p-4 text-sm text-gray-500"><svg class="w-5 h-5" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" y1="21" x2="16" y2="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="17" x2="12" y2="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>App Version</span><span class="ml-auto text-xs text-gray-400">1.1.0</span></div></div><button id="logout-btn" class="w-full bg-red-50 text-red-600 font-semibold py-3 rounded-xl hover:bg-red-100 active:scale-[0.98] transition text-sm border border-red-200">Sign Out</button></div>`
 }
 
 function renderApp() {
   const params = new URLSearchParams(window.location.hash.slice(1))
-  const active = params.get('tab') || 'jobs'
-  const contentMap = {
-    jobs: () => renderJobsContent(),
-    schedule: () => renderScheduleContent(),
-    pay: () => renderEmptyState('Pay'),
-    settings: () => renderSettingsContent(),
-  }
-  document.querySelector('#app').innerHTML = `<div class="flex flex-col h-dvh max-w-md mx-auto bg-gray-50 shadow-xl relative overflow-hidden"><header class="bg-white border-b border-gray-100 px-5 pt-12 pb-3 shrink-0"><div class="flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="text-lg font-bold text-emerald-700">Opek</span><span class="text-lg font-bold text-gray-400">Driver</span></div><div class="w-7 h-7 bg-emerald-100 rounded-full flex items-center justify-center"><span class="text-xs font-bold text-emerald-700">${(session?.user?.email||'?')[0].toUpperCase()}</span></div></div></header><main class="flex-1 overflow-y-auto p-4 relative">${(contentMap[active])()}</main><nav class="bg-white border-t border-gray-200 flex shrink-0">${tabs.map(tab=>{const isActive=tab.id===active;return`<a href="#tab=${tab.id}" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${isActive?'text-emerald-600':'text-gray-400 hover:text-gray-600'}"><svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${isActive?2.5:1.8}" stroke-linecap="round" stroke-linejoin="round">${iconsSvg[tab.icon]}</svg><span>${tab.label}</span></a>`}).join('')}</nav></div>`
-  bindEvents(active)
+  const active = params.get('tab') || 'offers'
+  const offersCount = getOffers().length
+  const contentMap = { offers: () => renderOffersContent(), jobs: () => renderJobsContent(), schedule: () => renderScheduleContent(), settings: () => renderSettingsContent() }
+  const showApp = driver?.status === 'approved'
+  document.querySelector('#app').innerHTML = `<div class="flex flex-col h-dvh max-w-md mx-auto bg-gray-50 shadow-xl relative overflow-hidden"><header class="bg-white border-b border-gray-100 px-5 pt-12 pb-3 shrink-0"><div class="flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="text-lg font-bold text-emerald-700">Opek</span><span class="text-lg font-bold text-gray-400">Driver</span></div><div class="w-7 h-7 bg-emerald-100 rounded-full flex items-center justify-center"><span class="text-xs font-bold text-emerald-700">${(driver?.full_name||session?.user?.email||'?')[0].toUpperCase()}</span></div></div></header><main class="flex-1 overflow-y-auto p-4 relative">${showApp?(contentMap[active]||contentMap.offers)():renderPendingScreen()}</main>${showApp?`<nav class="bg-white border-t border-gray-200 flex shrink-0">${tabs.map(tab=>{const isActive=tab.id===active;const badge=tab.id==='offers'&&offersCount>0?`<span class="absolute -top-1 -right-1 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center">${offersCount}</span>`:'';return`<a href="#tab=${tab.id}" class="relative flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${isActive?'text-emerald-600':'text-gray-400 hover:text-gray-600'}"><span class="relative"><svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${isActive?2.5:1.8}" stroke-linecap="round" stroke-linejoin="round">${iconsSvg[tab.icon]}</svg>${badge}</span><span>${tab.label}</span></a>`}).join('')}</nav>`:''}</div>`
+  bindEvents(active, showApp)
 }
 
-function bindEvents(active) {
-  if (active === 'jobs' && !loading && bookings.length) document.querySelectorAll('.job-card').forEach(c=>c.addEventListener('click',()=>{const id=c.dataset.bookingId;selectedBooking=bookings.find(b=>b.id===id);if(selectedBooking)showBookingDetail()}))
+function bindEvents(active, showApp = true) {
+  if (!showApp) { const b = document.getElementById('logout-btn'); if (b) b.addEventListener('click', async () => { await supabase.auth.signOut(); session = null; driver = null; window.location.hash = ''; renderLoginPage() }); return }
+  if (active === 'offers' && !loading) {
+    document.querySelectorAll('.accept-offer-btn').forEach(btn=>btn.addEventListener('click',async(e)=>{e.stopPropagation();const id=btn.dataset.assignmentId;btn.disabled=true;const{error}=await supabase.rpc('accept_job_assignment',{p_assignment_id:id});if(error)alert(error.message);await loadDriverData();window.location.hash='tab=jobs'}))
+    document.querySelectorAll('.decline-offer-btn').forEach(btn=>btn.addEventListener('click',async(e)=>{e.stopPropagation();const id=btn.dataset.assignmentId;if(!confirm('Decline this job offer?'))return;btn.disabled=true;const{error}=await supabase.rpc('decline_job_assignment',{p_assignment_id:id});if(error)alert(error.message);await loadDriverData()}))
+  }
+  if (active === 'jobs' && !loading && getAcceptedJobs().length) document.querySelectorAll('.job-card').forEach(c=>c.addEventListener('click',()=>{const id=c.dataset.bookingId;const aid=c.dataset.assignmentId;selectedBooking=bookingsById[id];selectedAssignment=aid?assignments.find(a=>a.id===aid):null;if(selectedBooking)showBookingDetail()}))
   if (active === 'schedule') {
     document.getElementById('prev-month').addEventListener('click',()=>{scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth()-1,1);renderApp()})
     document.getElementById('next-month').addEventListener('click',()=>{scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth()+1,1);renderApp()})
     document.querySelectorAll('[data-date]').forEach(c=>c.addEventListener('click',()=>{scheduleSelectedDate=c.dataset.date;renderApp()}))
-    document.querySelectorAll('.schedule-job-card').forEach(c=>c.addEventListener('click',()=>{const id=c.dataset.bookingId;selectedBooking=bookings.find(b=>b.id===id);if(selectedBooking)showBookingDetail()}))
+    document.querySelectorAll('.schedule-job-card').forEach(c=>c.addEventListener('click',()=>{const id=c.dataset.bookingId;selectedBooking=bookingsById[id];selectedAssignment=assignments.find(a=>a.booking_id===id&&(a.status==='accepted'||a.status==='completed'))||null;if(selectedBooking)showBookingDetail()}))
   }
   if (active === 'settings') { const b = document.getElementById('logout-btn'); if (b) b.addEventListener('click', async () => { await supabase.auth.signOut(); session = null; window.location.hash = ''; renderLoginPage() }) }
 }
 
 function showBookingDetail() {
-  const main = document.querySelector('main')
-  if (!main || !selectedBooking) return
-  main.insertAdjacentHTML('beforeend', renderBookingDetail(selectedBooking))
-  setTimeout(()=>document.getElementById('close-detail').addEventListener('click',closeBookingDetail),0)
+  const main = document.querySelector('main'); if (!main || !selectedBooking) return
+  main.insertAdjacentHTML('beforeend', renderBookingDetail(selectedBooking, selectedAssignment))
+  setTimeout(()=>{document.getElementById('close-detail')?.addEventListener('click',closeBookingDetail);document.getElementById('complete-job-btn')?.addEventListener('click',async()=>{if(!selectedAssignment||selectedAssignment.status!=='accepted')return;const btn=document.getElementById('complete-job-btn');btn.disabled=true;const{error}=await supabase.rpc('complete_job_assignment',{p_assignment_id:selectedAssignment.id});if(error){alert(error.message);btn.disabled=false;return};closeBookingDetail();await loadDriverData()})},0)
 }
 
-function closeBookingDetail() { const d = document.querySelector('main .animate-slide-up'); if (d) d.remove(); selectedBooking = null }
-
+function closeBookingDetail() { const d = document.querySelector('main .animate-slide-up'); if (d) d.remove(); selectedBooking = null; selectedAssignment = null }
 function render() { renderApp() }
 
 async function init() {
   const { data } = await supabase.auth.getSession()
   session = data.session
-  if (session) { renderApp(); loadBookings() }
+  if (session) { renderApp(); loadDriverData() }
   else renderLoginPage()
   supabase.auth.onAuthStateChange((_event, newSession) => {
     session = newSession
-    if (session) { renderApp(); loadBookings() }
-    else { window.location.hash = ''; renderLoginPage() }
+    if (session) { renderApp(); loadDriverData() }
+    else { driver = null; window.location.hash = ''; renderLoginPage() }
   })
 }
 
 init()
-
 window.addEventListener('hashchange', () => { if (session) renderApp() })
