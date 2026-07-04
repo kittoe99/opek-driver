@@ -1,12 +1,7 @@
 import './style.css'
 import { createClient } from '@supabase/supabase-js'
-import L from 'leaflet'
-delete L.Icon.Default.prototype._getIconUrl
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
-})
+
+// Leaflet loaded via CDN — available as global L
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY
@@ -226,7 +221,7 @@ function closeBookingDetail(){const d=document.querySelector('main .animate-slid
 
 async function geocodeAddress(address,city,state,zip){const key=[address,city,state,zip].filter(Boolean).join(', ');if(geocodeCache[key])return geocodeCache[key];const query=encodeURIComponent(key);try{const res=await fetch(`https://nominatim.openstreetmap.org/search?q=${query}&format=json&limit=1&addressdetails=0`);const data=await res.json();if(data.length){const result={lat:parseFloat(data[0].lat),lng:parseFloat(data[0].lon)};geocodeCache[key]=result;return result}}catch{}return null}
 
-function initScheduleMap(){const container=document.getElementById('map-container');if(!container)return;container.innerHTML='';const map=L.map('map-container',{zoomControl:false,attributionControl:false}).setView([39.7392,-104.9853],11);L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; CARTO',maxZoom:18}).addTo(map);const acceptedBookings=getAcceptedBookings();const colors=['#10b981','#6366f1','#f59e0b','#3b82f6','#ef4444'];acceptedBookings.forEach(async(b,i)=>{const addr=b.location_info;const coords=await geocodeAddress(addr?.address,addr?.city,addr?.state,addr?.zip_code);if(!coords)return;const m=L.circleMarker([coords.lat,coords.lng],{radius:8,fillColor:colors[i%colors.length],color:'#fff',weight:2,fillOpacity:.9}).addTo(map);const name=(b.customer_info?.name||'').split(' ')[0];m.bindTooltip(name,{permanent:true,direction:'top',offset:[0,-12]});m.bindPopup(`${b.customer_info?.name||''}<br><span style="font-size:11px;color:#6b7280">${b.booking_details?.service_type||''} &middot; ${formatDate(b.booking_details?.preferred_date)}</span>`);m.on('click',()=>{selectedBooking=b;selectedAssignment=assignments.find(a=>a.booking_id===b.id)||null;showBookingDetail()})});setTimeout(()=>map.invalidateSize(),100)}
+function initScheduleMap(){const L=window.L;if(!L)return;const container=document.getElementById('map-container');if(!container)return;container.innerHTML='';const map=L.map('map-container',{zoomControl:false,attributionControl:false}).setView([39.7392,-104.9853],11);L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',{attribution:'&copy; CARTO',maxZoom:18}).addTo(map);const acceptedBookings=getAcceptedBookings();const colors=['#10b981','#6366f1','#f59e0b','#3b82f6','#ef4444'];acceptedBookings.forEach(async(b,i)=>{const addr=b.location_info;const coords=await geocodeAddress(addr?.address,addr?.city,addr?.state,addr?.zip_code);if(!coords)return;const m=L.circleMarker([coords.lat,coords.lng],{radius:8,fillColor:colors[i%colors.length],color:'#fff',weight:2,fillOpacity:.9}).addTo(map);const name=(b.customer_info?.name||'').split(' ')[0];m.bindTooltip(name,{permanent:true,direction:'top',offset:[0,-12]});m.bindPopup(`${b.customer_info?.name||''}<br><span style="font-size:11px;color:#6b7280">${b.booking_details?.service_type||''} &middot; ${formatDate(b.booking_details?.preferred_date)}</span>`);m.on('click',()=>{selectedBooking=b;selectedAssignment=assignments.find(a=>a.booking_id===b.id)||null;showBookingDetail()})});setTimeout(()=>map.invalidateSize(),100)}
 
 function render(){renderApp()}
 
