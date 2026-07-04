@@ -63,10 +63,10 @@
 }
 
 .pl-bar {
-  width: 1.5rem;
-  height: 3.5rem;
+  width: 0.625rem;
+  height: 1.5rem;
   background: #355070;
-  border-radius: 2px;
+  border-radius: 1px;
   transform: skewX(-18deg);
   transform-origin: bottom;
 }
