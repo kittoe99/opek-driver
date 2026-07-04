@@ -126,32 +126,32 @@ function renderLoginPage() {
 
   setTimeout(() => {
     if (authView === 'login') {
-      const form = document.getElementById('login-form'); const errorEl = document.getElementById('login-error')
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault(); const email = document.getElementById('login-email').value; const password = document.getElementById('login-password').value
-        errorEl.classList.add('hidden')
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password })
-        if (error) { errorEl.textContent = error.message; errorEl.classList.remove('hidden') }
+      const f = document.getElementById('login-form'); const e = document.getElementById('login-error')
+      f.addEventListener('submit', async (ev) => {
+        ev.preventDefault(); const email = document.getElementById('login-email').value; const pw = document.getElementById('login-password').value
+        e.classList.add('hidden')
+        const { data, error } = await supabase.auth.signInWithPassword({ email, password: pw })
+        if (error) { e.textContent = error.message; e.classList.remove('hidden') }
         else { session = data.session; renderApp() }
       })
     } else {
-      const form = document.getElementById('signup-form'); const errorEl = document.getElementById('signup-error')
-      form.addEventListener('submit', async (e) => {
-        e.preventDefault(); const email = document.getElementById('signup-email').value; const password = document.getElementById('signup-password').value
-        errorEl.classList.add('hidden')
-        const { data, error } = await supabase.auth.signUp({ email, password })
-        if (error) { errorEl.textContent = error.message; errorEl.classList.remove('hidden') }
+      const f = document.getElementById('signup-form'); const e = document.getElementById('signup-error')
+      f.addEventListener('submit', async (ev) => {
+        ev.preventDefault(); const email = document.getElementById('signup-email').value; const pw = document.getElementById('signup-password').value
+        e.classList.add('hidden')
+        const { data, error } = await supabase.auth.signUp({ email, password: pw })
+        if (error) { e.textContent = error.message; e.classList.remove('hidden') }
         else {
           await supabase.from('crm_admins').insert({ email }).select()
           session = data.session
           if (session) renderApp()
-          else { errorEl.textContent = 'Check your email to confirm your account.'; errorEl.classList.remove('hidden') }
+          else { e.textContent = 'Check your email to confirm your account.'; e.classList.remove('hidden') }
         }
       })
     }
     const ssu = document.getElementById('switch-to-signup'); const sli = document.getElementById('switch-to-login')
-    if (ssu) ssu.addEventListener('click', (e) => { e.preventDefault(); authView = 'signup'; renderLoginPage() })
-    if (sli) sli.addEventListener('click', (e) => { e.preventDefault(); authView = 'login'; renderLoginPage() })
+    if (ssu) ssu.addEventListener('click', (ev) => { ev.preventDefault(); authView = 'signup'; renderLoginPage() })
+    if (sli) sli.addEventListener('click', (ev) => { ev.preventDefault(); authView = 'login'; renderLoginPage() })
   }, 0)
 }
 
@@ -198,7 +198,6 @@ function renderSettingsContent() {
 function renderApp() {
   const params = new URLSearchParams(window.location.hash.slice(1))
   const active = params.get('tab') || 'jobs'
-  const activeTabData = tabs.find(t => t.id === active)
   const contentMap = {
     jobs: () => renderJobsContent(),
     schedule: () => renderScheduleContent(),
@@ -210,33 +209,24 @@ function renderApp() {
 }
 
 function bindEvents(active) {
-  if (active === 'jobs' && !loading && bookings.length) {
-    document.querySelectorAll('.job-card').forEach(card=>{card.addEventListener('click',()=>{const id=card.dataset.bookingId;selectedBooking=bookings.find(b=>b.id===id);if(selectedBooking)showBookingDetail()})})
-  }
+  if (active === 'jobs' && !loading && bookings.length) document.querySelectorAll('.job-card').forEach(c=>c.addEventListener('click',()=>{const id=c.dataset.bookingId;selectedBooking=bookings.find(b=>b.id===id);if(selectedBooking)showBookingDetail()}))
   if (active === 'schedule') {
     document.getElementById('prev-month').addEventListener('click',()=>{scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth()-1,1);renderApp()})
     document.getElementById('next-month').addEventListener('click',()=>{scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth()+1,1);renderApp()})
-    document.querySelectorAll('[data-date]').forEach(cell=>{cell.addEventListener('click',()=>{scheduleSelectedDate=cell.dataset.date;renderApp()})})
-    document.querySelectorAll('.schedule-job-card').forEach(card=>{card.addEventListener('click',()=>{const id=card.dataset.bookingId;selectedBooking=bookings.find(b=>b.id===id);if(selectedBooking)showBookingDetail()})})
+    document.querySelectorAll('[data-date]').forEach(c=>c.addEventListener('click',()=>{scheduleSelectedDate=c.dataset.date;renderApp()}))
+    document.querySelectorAll('.schedule-job-card').forEach(c=>c.addEventListener('click',()=>{const id=c.dataset.bookingId;selectedBooking=bookings.find(b=>b.id===id);if(selectedBooking)showBookingDetail()}))
   }
-  if (active === 'settings') {
-    const btn = document.getElementById('logout-btn')
-    if (btn) btn.addEventListener('click', async () => { await supabase.auth.signOut(); session = null; window.location.hash = ''; renderLoginPage() })
-  }
+  if (active === 'settings') { const b = document.getElementById('logout-btn'); if (b) b.addEventListener('click', async () => { await supabase.auth.signOut(); session = null; window.location.hash = ''; renderLoginPage() }) }
 }
 
 function showBookingDetail() {
   const main = document.querySelector('main')
   if (!main || !selectedBooking) return
   main.insertAdjacentHTML('beforeend', renderBookingDetail(selectedBooking))
-  setTimeout(()=>{document.getElementById('close-detail').addEventListener('click',closeBookingDetail)},0)
+  setTimeout(()=>document.getElementById('close-detail').addEventListener('click',closeBookingDetail),0)
 }
 
-function closeBookingDetail() {
-  const detail = document.querySelector('main .animate-slide-up')
-  if (detail) detail.remove()
-  selectedBooking = null
-}
+function closeBookingDetail() { const d = document.querySelector('main .animate-slide-up'); if (d) d.remove(); selectedBooking = null }
 
 function render() { renderApp() }
 
