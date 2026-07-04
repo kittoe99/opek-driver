@@ -84,34 +84,18 @@ function formatMonth(date) {
   return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
 }
 
-function getDaysInMonth(year, month) {
-  return new Date(year, month + 1, 0).getDate()
-}
-
-function getFirstDayOfMonth(year, month) {
-  return new Date(year, month, 1).getDay()
-}
-
-function getBookingsForDate(dateStr) {
-  return bookings.filter(b => b.booking_details?.preferred_date === dateStr)
-}
+function getDaysInMonth(year, month) { return new Date(year, month + 1, 0).getDate() }
+function getFirstDayOfMonth(year, month) { return new Date(year, month, 1).getDay() }
+function getBookingsForDate(dateStr) { return bookings.filter(b => b.booking_details?.preferred_date === dateStr) }
 
 function groupBookingsByDate() {
   const map = {}
-  bookings.forEach(b => {
-    const d = b.booking_details?.preferred_date
-    if (d) {
-      if (!map[d]) map[d] = []
-      map[d].push(b)
-    }
-  })
+  bookings.forEach(b => { const d = b.booking_details?.preferred_date; if (d) { if (!map[d]) map[d] = []; map[d].push(b) } })
   return map
 }
 
 function isSameDay(d1, d2) {
-  return d1.getFullYear() === d2.getFullYear()
-    && d1.getMonth() === d2.getMonth()
-    && d1.getDate() === d2.getDate()
+  return d1.getFullYear() === d2.getFullYear() && d1.getMonth() === d2.getMonth() && d1.getDate() === d2.getDate()
 }
 
 function jobCard(booking) {
@@ -119,111 +103,14 @@ function jobCard(booking) {
   const sc = statusConfig[status] || statusConfig.pending
   const serviceBadge = serviceTypeConfig[booking_details?.service_type] || 'bg-gray-100 text-gray-700'
   const hasPhoto = booking_details?.photo_url
-
-  return `
-    <div class="job-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-3 border-l-4 ${sc.border} active:scale-[0.98] transition-transform cursor-pointer" data-booking-id="${id}">
-      <div class="p-4">
-        <div class="flex items-start justify-between mb-2">
-          <div class="flex items-center gap-2">
-            <span class="text-sm font-bold text-gray-800 tracking-tight">${location_info?.city || order_number || ''}</span>
-            <span class="text-xs px-2 py-0.5 rounded-full font-medium ${sc.bg} ${sc.text} capitalize">${(status || 'pending').replace('_', ' ')}</span>
-          </div>
-          <span class="text-lg font-bold text-gray-900">$${booking_details?.price || 0}</span>
-        </div>
-        <div class="flex items-start gap-3 mb-3">
-          ${hasPhoto ? `<img src="${booking_details.photo_url}" class="w-12 h-12 rounded-lg object-cover shrink-0" alt="" loading="lazy" />` : `<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0"><svg class="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`}
-          <div class="min-w-0">
-            <p class="font-semibold text-gray-800 truncate">${customer_info?.name || 'Unknown'}</p>
-            <span class="inline-block text-xs px-1.5 py-0.5 rounded font-medium mt-1 ${serviceBadge}">${booking_details?.service_type || 'Service'}</span>
-          </div>
-        </div>
-        <div class="flex items-center gap-4 text-xs text-gray-500">
-          <div class="flex items-center gap-1 truncate"><svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="truncate">${location_info?.city || ''}, ${location_info?.state || ''}</span></div>
-          <div class="flex items-center gap-1 shrink-0"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>${formatDate(booking_details?.preferred_date)}</span></div>
-          <div class="flex items-center gap-1 shrink-0"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>${booking_details?.preferred_time || ''}</span></div>
-        </div>
-      </div>
-    </div>
-  `
+  return `<div class="job-card bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden mb-3 border-l-4 ${sc.border} active:scale-[0.98] transition-transform cursor-pointer" data-booking-id="${id}"><div class="p-4"><div class="flex items-start justify-between mb-2"><div class="flex items-center gap-2"><span class="text-sm font-bold text-gray-800 tracking-tight">${location_info?.city || order_number || ''}</span><span class="text-xs px-2 py-0.5 rounded-full font-medium ${sc.bg} ${sc.text} capitalize">${(status||'pending').replace('_',' ')}</span></div><span class="text-lg font-bold text-gray-900">$${booking_details?.price||0}</span></div><div class="flex items-start gap-3 mb-3">${hasPhoto?`<img src="${booking_details.photo_url}" class="w-12 h-12 rounded-lg object-cover shrink-0" alt="" loading="lazy" />`:`<div class="w-12 h-12 rounded-lg bg-gray-100 flex items-center justify-center shrink-0"><svg class="w-5 h-5 text-gray-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg></div>`}<div class="min-w-0"><p class="font-semibold text-gray-800 truncate">${customer_info?.name||'Unknown'}</p><span class="inline-block text-xs px-1.5 py-0.5 rounded font-medium mt-1 ${serviceBadge}">${booking_details?.service_type||'Service'}</span></div></div><div class="flex items-center gap-4 text-xs text-gray-500"><div class="flex items-center gap-1 truncate"><svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg><span class="truncate">${location_info?.city||''}, ${location_info?.state||''}</span></div><div class="flex items-center gap-1 shrink-0"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg><span>${formatDate(booking_details?.preferred_date)}</span></div><div class="flex items-center gap-1 shrink-0"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg><span>${booking_details?.preferred_time||''}</span></div></div></div></div>`
 }
 
 function renderBookingDetail(booking) {
   const { order_number, customer_info, location_info, booking_details, status, created_at } = booking
   const sc = statusConfig[status] || statusConfig.pending
   const serviceBadge = serviceTypeConfig[booking_details?.service_type] || 'bg-gray-100 text-gray-700'
-
-  return `
-    <div class="absolute inset-0 z-20 bg-gray-50 flex flex-col animate-slide-up">
-      <header class="bg-emerald-700 text-white px-5 pt-12 pb-4 shrink-0">
-        <div class="flex items-center gap-3">
-          <button id="close-detail" class="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center active:scale-90 transition-transform">
-            <svg class="w-5 h-5" viewBox="0 0 24 24">${iconsSvg.chevronLeft}</svg>
-          </button>
-          <div>
-            <h1 class="text-lg font-bold leading-tight">${order_number || ''}</h1>
-            <p class="text-emerald-200 text-xs">Booking Details</p>
-          </div>
-        </div>
-      </header>
-      <main class="flex-1 overflow-y-auto">
-        ${booking_details?.photo_url ? `<div class="h-48 bg-gray-200"><img src="${booking_details.photo_url}" class="w-full h-full object-cover" alt="" /></div>` : ''}
-        <div class="p-4 space-y-4">
-          <div class="flex items-center justify-between bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <div class="flex items-center gap-3">
-              <span class="text-xs px-2.5 py-1 rounded-full font-semibold ${sc.bg} ${sc.text} capitalize">${(status || 'pending').replace('_', ' ')}</span>
-              <span class="text-xs px-2.5 py-1 rounded-full font-medium ${serviceBadge}">${booking_details?.service_type || 'Service'}</span>
-            </div>
-            <span class="text-xl font-bold text-gray-900">$${booking_details?.price || 0}</span>
-          </div>
-          <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Customer</h3>
-            <p class="text-base font-semibold text-gray-800">${customer_info?.name || 'Unknown'}</p>
-            ${customer_info?.email ? `<a href="mailto:${customer_info.email}" class="flex items-center gap-2 text-sm text-gray-500 mt-2"><svg class="w-4 h-4" viewBox="0 0 24 24">${iconsSvg.mail}</svg><span>${customer_info.email}</span></a>` : ''}
-            ${customer_info?.phone ? `<a href="tel:${customer_info.phone.replace(/[^0-9+]/g, '')}" class="flex items-center gap-2 text-sm text-gray-500 mt-1.5"><svg class="w-4 h-4" viewBox="0 0 24 24">${iconsSvg.phone}</svg><span>${customer_info.phone}</span></a>` : ''}
-          </div>
-          <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Location</h3>
-            <p class="text-sm text-gray-700">${location_info?.address || ''}${location_info?.unit_number ? ' ' + location_info.unit_number : ''}</p>
-            <p class="text-sm text-gray-700">${location_info?.city || ''}, ${location_info?.state || ''} ${location_info?.zip_code || ''}</p>
-          </div>
-          ${booking_details?.preferred_date || booking_details?.preferred_time ? `
-            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Schedule</h3>
-              ${booking_details?.preferred_date ? `<div class="flex items-center gap-2 text-sm text-gray-700"><svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24">${iconsSvg.calendar}</svg><span>${formatDate(booking_details.preferred_date)}</span></div>` : ''}
-              ${booking_details?.preferred_time ? `<div class="flex items-center gap-2 text-sm text-gray-700 mt-2"><svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24">${iconsSvg.clock}</svg><span>${booking_details.preferred_time}</span></div>` : ''}
-            </div>
-          ` : ''}
-          ${booking_details?.estimated_items && booking_details.estimated_items.length ? `
-            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Items</h3>
-              ${booking_details.estimated_items.map(item => `<div class="flex items-center gap-2 text-sm text-gray-700"><svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24">${iconsSvg.package}</svg><span>${item}</span></div>`).join('')}
-              ${booking_details?.estimated_volume ? `<p class="text-xs text-gray-400 mt-2">${booking_details.estimated_volume}</p>` : ''}
-            </div>
-          ` : ''}
-          ${booking_details?.estimate_summary ? `
-            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Pricing</h3>
-              <p class="text-sm text-gray-700">${booking_details.estimate_summary}</p>
-            </div>
-          ` : ''}
-          ${booking_details?.deposit_paid != null ? `
-            <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-              <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Deposit</h3>
-              <div class="flex items-center gap-2">
-                <svg class="w-4 h-4 ${booking_details.deposit_paid ? 'text-emerald-500' : 'text-amber-500'}" viewBox="0 0 24 24">${iconsSvg.checkCircle}</svg>
-                <span class="text-sm font-medium ${booking_details.deposit_paid ? 'text-emerald-600' : 'text-amber-600'}">${booking_details.deposit_paid ? '$' + (booking_details.deposit_amount || 0) + ' paid' : 'Not paid'}</span>
-              </div>
-            </div>
-          ` : ''}
-          <div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
-            <h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Details</h3>
-            <p class="text-sm text-gray-700 whitespace-pre-wrap">${booking_details?.details || 'No additional details'}</p>
-          </div>
-          <p class="text-xs text-gray-400 text-center pb-4">Created ${formatDateTime(created_at)}</p>
-        </div>
-      </main>
-    </div>
-  `
+  return `<div class="absolute inset-0 z-20 bg-gray-50 flex flex-col animate-slide-up"><header class="bg-white border-b border-gray-100 px-5 pt-12 pb-3 shrink-0"><div class="flex items-center gap-3"><button id="close-detail" class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center active:scale-90 transition-transform"><svg class="w-5 h-5 text-gray-600" viewBox="0 0 24 24">${iconsSvg.chevronLeft}</svg></button><div><span class="text-sm font-bold text-gray-800">${order_number||''}</span><span class="text-xs ml-2 px-2 py-0.5 rounded-full font-semibold ${sc.bg} ${sc.text} capitalize">${(status||'pending').replace('_',' ')}</span></div></div></header><main class="flex-1 overflow-y-auto">${booking_details?.photo_url?`<div class="h-48 bg-gray-200"><img src="${booking_details.photo_url}" class="w-full h-full object-cover" alt="" /></div>`:''}<div class="p-4 space-y-4"><div class="flex items-center justify-between bg-white rounded-xl p-4 shadow-sm border border-gray-100"><span class="text-xs px-2.5 py-1 rounded-full font-medium ${serviceBadge}">${booking_details?.service_type||'Service'}</span><span class="text-xl font-bold text-gray-900">$${booking_details?.price||0}</span></div><div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Customer</h3><p class="text-base font-semibold text-gray-800">${customer_info?.name||'Unknown'}</p>${customer_info?.email?`<a href="mailto:${customer_info.email}" class="flex items-center gap-2 text-sm text-gray-500 mt-2"><svg class="w-4 h-4" viewBox="0 0 24 24">${iconsSvg.mail}</svg><span>${customer_info.email}</span></a>`:''}${customer_info?.phone?`<a href="tel:${customer_info.phone.replace(/[^0-9+]/g,'')}" class="flex items-center gap-2 text-sm text-gray-500 mt-1.5"><svg class="w-4 h-4" viewBox="0 0 24 24">${iconsSvg.phone}</svg><span>${customer_info.phone}</span></a>`:''}</div><div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Location</h3><p class="text-sm text-gray-700">${location_info?.address||''}${location_info?.unit_number?' '+location_info.unit_number:''}</p><p class="text-sm text-gray-700">${location_info?.city||''}, ${location_info?.state||''} ${location_info?.zip_code||''}</p></div>${booking_details?.preferred_date||booking_details?.preferred_time?`<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Schedule</h3>${booking_details?.preferred_date?`<div class="flex items-center gap-2 text-sm text-gray-700"><svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24">${iconsSvg.calendar}</svg><span>${formatDate(booking_details.preferred_date)}</span></div>`:''}${booking_details?.preferred_time?`<div class="flex items-center gap-2 text-sm text-gray-700 mt-2"><svg class="w-4 h-4 text-gray-400" viewBox="0 0 24 24">${iconsSvg.clock}</svg><span>${booking_details.preferred_time}</span></div>`:''}</div>`:''}${booking_details?.estimated_items&&booking_details.estimated_items.length?`<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Items</h3>${booking_details.estimated_items.map(item=>`<div class="flex items-center gap-2 text-sm text-gray-700"><svg class="w-4 h-4 text-gray-400 shrink-0" viewBox="0 0 24 24">${iconsSvg.package}</svg><span>${item}</span></div>`).join('')}${booking_details?.estimated_volume?`<p class="text-xs text-gray-400 mt-2">${booking_details.estimated_volume}</p>`:''}</div>`:''}${booking_details?.estimate_summary?`<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Pricing</h3><p class="text-sm text-gray-700">${booking_details.estimate_summary}</p></div>`:''}${booking_details?.deposit_paid!=null?`<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Deposit</h3><div class="flex items-center gap-2"><svg class="w-4 h-4 ${booking_details.deposit_paid?'text-emerald-500':'text-amber-500'}" viewBox="0 0 24 24">${iconsSvg.checkCircle}</svg><span class="text-sm font-medium ${booking_details.deposit_paid?'text-emerald-600':'text-amber-600'}">${booking_details.deposit_paid?'$'+(booking_details.deposit_amount||0)+' paid':'Not paid'}</span></div></div>`:''}<div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100"><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-3">Details</h3><p class="text-sm text-gray-700 whitespace-pre-wrap">${booking_details?.details||'No additional details'}</p></div><p class="text-xs text-gray-400 text-center pb-4">Created ${formatDateTime(created_at)}</p></div></main></div>`
 }
 
 async function loadBookings() {
@@ -234,54 +121,14 @@ async function loadBookings() {
 }
 
 function renderLoginPage() {
-  document.querySelector('#app').innerHTML = `
-    <div class="flex flex-col h-dvh max-w-md mx-auto bg-emerald-700 relative overflow-hidden">
-      <div class="absolute top-0 left-0 right-0 h-64 bg-emerald-700"></div>
-      <div class="absolute bottom-0 left-0 right-0 h-1/2 bg-gray-50"></div>
-      <div class="relative z-10 flex flex-col h-full">
-        <div class="pt-20 pb-8 px-8 text-center text-white">
-          <div class="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <svg class="w-8 h-8" viewBox="0 0 24 24">${iconsSvg.package}</svg>
-          </div>
-          <h1 class="text-2xl font-bold">Opek Junk Removal</h1>
-          <p class="text-emerald-200 text-sm mt-1">Driver Dashboard</p>
-        </div>
-        <div class="flex-1 flex flex-col px-6 justify-center">
-          <div class="bg-white rounded-2xl shadow-xl p-6">
-            ${authView === 'login' ? `
-              <h2 class="text-lg font-bold text-gray-800 mb-6">Sign In</h2>
-              <form id="login-form" class="space-y-4">
-                <div><label class="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" id="login-email" placeholder="you@example.com" required class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div>
-                <div><label class="block text-xs font-medium text-gray-600 mb-1">Password</label><input type="password" id="login-password" placeholder="Enter your password" required class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div>
-                <p id="login-error" class="text-red-500 text-xs hidden"></p>
-                <button type="submit" class="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition text-sm">Sign In</button>
-              </form>
-              <p class="text-center text-xs text-gray-500 mt-4">Don't have an account? <a href="#" id="switch-to-signup" class="text-emerald-600 font-medium">Sign Up</a></p>
-            ` : `
-              <h2 class="text-lg font-bold text-gray-800 mb-6">Create Account</h2>
-              <form id="signup-form" class="space-y-4">
-                <div><label class="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" id="signup-email" placeholder="you@example.com" required class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div>
-                <div><label class="block text-xs font-medium text-gray-600 mb-1">Password</label><input type="password" id="signup-password" placeholder="Min. 6 characters" required minlength="6" class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div>
-                <p id="signup-error" class="text-red-500 text-xs hidden"></p>
-                <button type="submit" class="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition text-sm">Create Account</button>
-              </form>
-              <p class="text-center text-xs text-gray-500 mt-4">Already have an account? <a href="#" id="switch-to-login" class="text-emerald-600 font-medium">Sign In</a></p>
-            `}
-          </div>
-        </div>
-        <p class="text-center text-xs text-gray-400 pb-6">Opek Junk Removal &copy; 2026</p>
-      </div>
-    </div>
-  `
+  document.querySelector('#app').innerHTML = `<div class="flex flex-col h-dvh max-w-md mx-auto bg-emerald-700 relative overflow-hidden"><div class="absolute top-0 left-0 right-0 h-64 bg-emerald-700"></div><div class="absolute bottom-0 left-0 right-0 h-1/2 bg-gray-50"></div><div class="relative z-10 flex flex-col h-full"><div class="pt-20 pb-8 px-8 text-center text-white"><div class="w-16 h-16 bg-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg"><svg class="w-8 h-8" viewBox="0 0 24 24">${iconsSvg.package}</svg></div><h1 class="text-2xl font-bold">Opek Junk Removal</h1><p class="text-emerald-200 text-sm mt-1">Driver Dashboard</p></div><div class="flex-1 flex flex-col px-6 justify-center"><div class="bg-white rounded-2xl shadow-xl p-6">${authView==='login'?`<h2 class="text-lg font-bold text-gray-800 mb-6">Sign In</h2><form id="login-form" class="space-y-4"><div><label class="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" id="login-email" placeholder="you@example.com" required class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div><div><label class="block text-xs font-medium text-gray-600 mb-1">Password</label><input type="password" id="login-password" placeholder="Enter your password" required class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div><p id="login-error" class="text-red-500 text-xs hidden"></p><button type="submit" class="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition text-sm">Sign In</button></form><p class="text-center text-xs text-gray-500 mt-4">Don't have an account? <a href="#" id="switch-to-signup" class="text-emerald-600 font-medium">Sign Up</a></p>`:`<h2 class="text-lg font-bold text-gray-800 mb-6">Create Account</h2><form id="signup-form" class="space-y-4"><div><label class="block text-xs font-medium text-gray-600 mb-1">Email</label><input type="email" id="signup-email" placeholder="you@example.com" required class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div><div><label class="block text-xs font-medium text-gray-600 mb-1">Password</label><input type="password" id="signup-password" placeholder="Min. 6 characters" required minlength="6" class="w-full px-4 py-3 rounded-xl border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition" /></div><p id="signup-error" class="text-red-500 text-xs hidden"></p><button type="submit" class="w-full bg-emerald-600 text-white font-semibold py-3 rounded-xl hover:bg-emerald-700 active:scale-[0.98] transition text-sm">Create Account</button></form><p class="text-center text-xs text-gray-500 mt-4">Already have an account? <a href="#" id="switch-to-login" class="text-emerald-600 font-medium">Sign In</a></p>`}</div></div><p class="text-center text-xs text-gray-400 pb-6">Opek Junk Removal &copy; 2026</p></div></div>`
 
   setTimeout(() => {
     if (authView === 'login') {
       const form = document.getElementById('login-form')
       const errorEl = document.getElementById('login-error')
       form.addEventListener('submit', async (e) => {
-        e.preventDefault()
-        const email = document.getElementById('login-email').value
-        const password = document.getElementById('login-password').value
+        e.preventDefault(); const email = document.getElementById('login-email').value; const password = document.getElementById('login-password').value
         errorEl.classList.add('hidden')
         const { data, error } = await supabase.auth.signInWithPassword({ email, password })
         if (error) { errorEl.textContent = error.message; errorEl.classList.remove('hidden') }
@@ -291,9 +138,7 @@ function renderLoginPage() {
       const form = document.getElementById('signup-form')
       const errorEl = document.getElementById('signup-error')
       form.addEventListener('submit', async (e) => {
-        e.preventDefault()
-        const email = document.getElementById('signup-email').value
-        const password = document.getElementById('signup-password').value
+        e.preventDefault(); const email = document.getElementById('signup-email').value; const password = document.getElementById('signup-password').value
         errorEl.classList.add('hidden')
         const { data, error } = await supabase.auth.signUp({ email, password })
         if (error) { errorEl.textContent = error.message; errorEl.classList.remove('hidden') }
@@ -305,8 +150,7 @@ function renderLoginPage() {
         }
       })
     }
-    const ssu = document.getElementById('switch-to-signup')
-    const sli = document.getElementById('switch-to-login')
+    const ssu = document.getElementById('switch-to-signup'); const sli = document.getElementById('switch-to-login')
     if (ssu) ssu.addEventListener('click', (e) => { e.preventDefault(); authView = 'signup'; renderLoginPage() })
     if (sli) sli.addEventListener('click', (e) => { e.preventDefault(); authView = 'login'; renderLoginPage() })
   }, 0)
@@ -314,7 +158,7 @@ function renderLoginPage() {
 
 function renderEmptyState(label) {
   const iconMap = { Jobs: iconsSvg.briefcase, Schedule: iconsSvg.calendar, Pay: iconsSvg.wallet, Settings: iconsSvg.cog }
-  return `<div class="flex flex-col items-center justify-center h-full text-gray-400 px-6 py-12"><svg class="w-16 h-16 mb-4 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">${iconMap[label] || iconMap['Jobs']}</svg><p class="text-lg font-medium text-gray-500">No ${label.toLowerCase()} yet</p><p class="text-sm text-gray-400 mt-1">Your ${label.toLowerCase()} will appear here</p></div>`
+  return `<div class="flex flex-col items-center justify-center h-full text-gray-400 px-6 py-12"><svg class="w-16 h-16 mb-4 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">${iconMap[label]||iconMap['Jobs']}</svg><p class="text-lg font-medium text-gray-500">No ${label.toLowerCase()} yet</p><p class="text-sm text-gray-400 mt-1">Your ${label.toLowerCase()} will appear here</p></div>`
 }
 
 function renderJobsContent() {
@@ -326,10 +170,8 @@ function renderJobsContent() {
 function renderScheduleContent() {
   const bookingsByDate = groupBookingsByDate()
   const upcoming = bookings.filter(b=>b.booking_details?.preferred_date).sort((a,b)=>a.booking_details.preferred_date.localeCompare(b.booking_details.preferred_date)).filter(b=>b.booking_details.preferred_date>=new Date().toISOString().slice(0,10))
-  const year = scheduleMonth.getFullYear()
-  const month = scheduleMonth.getMonth()
-  const daysInMonth = getDaysInMonth(year, month)
-  const firstDay = getFirstDayOfMonth(year, month)
+  const year = scheduleMonth.getFullYear(); const month = scheduleMonth.getMonth()
+  const daysInMonth = getDaysInMonth(year, month); const firstDay = getFirstDayOfMonth(year, month)
   const today = new Date()
   let calendarHTML = ''
   for (let i = 0; i < firstDay; i++) calendarHTML += '<div class="h-9"></div>'
@@ -347,37 +189,11 @@ function renderScheduleContent() {
   }
   const selectedDateJobs = scheduleSelectedDate ? getBookingsForDate(scheduleSelectedDate) : []
   const dayNames = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat']
-  return `
-    <div class="space-y-4">
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
-        <div class="flex items-center justify-between px-4 py-3 border-b border-gray-50">
-          <button id="prev-month" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 transition text-gray-500"><svg class="w-4 h-4" viewBox="0 0 24 24">${iconsSvg.chevronLeft}</svg></button>
-          <span class="text-sm font-bold text-gray-800">${formatMonth(scheduleMonth)}</span>
-          <button id="next-month" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 transition text-gray-500"><svg class="w-4 h-4 rotate-180" viewBox="0 0 24 24">${iconsSvg.chevronLeft}</svg></button>
-        </div>
-        <div class="p-3">
-          <div class="grid grid-cols-7 text-center text-xs font-medium text-gray-400 mb-1">${dayNames.map(d=>`<div>${d}</div>`).join('')}</div>
-          <div class="grid grid-cols-7 gap-0.5">${calendarHTML}</div>
-        </div>
-      </div>
-      ${scheduleSelectedDate?`<div><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">${formatDate(scheduleSelectedDate)}</h3><div class="space-y-2">${selectedDateJobs.length?selectedDateJobs.map(b=>{const sc=statusConfig[b.status]||statusConfig.pending;const sb=serviceTypeConfig[b.booking_details?.service_type]||'bg-gray-100 text-gray-700';return`<div class="schedule-job-card bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer" data-booking-id="${b.id}"><div class="w-2 h-10 ${sc.dot} rounded-full shrink-0"></div><div class="min-w-0 flex-1"><p class="text-sm font-semibold text-gray-800 truncate">${b.customer_info?.name||'Unknown'}</p><div class="flex items-center gap-2 mt-0.5"><span class="text-xs font-medium ${sc.text} capitalize">${(b.status||'pending').replace('_',' ')}</span><span class="text-xs px-1.5 py-0.5 rounded font-medium ${sb}">${b.booking_details?.service_type||''}</span></div></div><span class="text-sm font-bold text-gray-900 shrink-0">$${b.booking_details?.price||0}</span></div>`}).join(''):'<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center text-sm text-gray-400">No jobs on this date</div>'}</div></div>`:''}
-      ${upcoming.length?`<div><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">Upcoming</h3><div class="space-y-2">${upcoming.slice(0,6).map(b=>{const sc=statusConfig[b.status]||statusConfig.pending;const sb=serviceTypeConfig[b.booking_details?.service_type]||'bg-gray-100 text-gray-700';return`<div class="schedule-job-card bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer" data-booking-id="${b.id}"><div class="flex flex-col items-center shrink-0 w-12"><span class="text-xs font-bold text-gray-500">${new Date(b.booking_details.preferred_date+'T00:00:00').toLocaleDateString('en-US',{month:'short'}).toUpperCase()}</span><span class="text-lg font-bold text-gray-800">${new Date(b.booking_details.preferred_date+'T00:00:00').getDate()}</span></div><div class="min-w-0 flex-1"><p class="text-sm font-semibold text-gray-800 truncate">${b.customer_info?.name||'Unknown'}</p><div class="flex items-center gap-2 mt-0.5"><span class="text-xs font-medium ${sc.text} capitalize">${(b.status||'pending').replace('_',' ')}</span><span class="text-xs px-1.5 py-0.5 rounded font-medium ${sb}">${b.booking_details?.service_type||''}</span><span class="text-xs text-gray-400">${b.booking_details?.preferred_time||''}</span></div></div><span class="text-sm font-bold text-gray-900 shrink-0">$${b.booking_details?.price||0}</span></div>`}).join('')}</div></div>`:`<div class="text-center text-gray-400 py-8"><svg class="w-12 h-12 mx-auto mb-2 text-gray-300" viewBox="0 0 24 24">${iconsSvg.calendar}</svg><p class="text-sm">No upcoming jobs</p></div>`}
-    </div>`
+  return `<div class="space-y-4"><div class="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden"><div class="flex items-center justify-between px-4 py-3 border-b border-gray-50"><button id="prev-month" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 transition text-gray-500"><svg class="w-4 h-4" viewBox="0 0 24 24">${iconsSvg.chevronLeft}</svg></button><span class="text-sm font-bold text-gray-800">${formatMonth(scheduleMonth)}</span><button id="next-month" class="w-8 h-8 rounded-lg flex items-center justify-center hover:bg-gray-100 transition text-gray-500"><svg class="w-4 h-4 rotate-180" viewBox="0 0 24 24">${iconsSvg.chevronLeft}</svg></button></div><div class="p-3"><div class="grid grid-cols-7 text-center text-xs font-medium text-gray-400 mb-1">${dayNames.map(d=>`<div>${d}</div>`).join('')}</div><div class="grid grid-cols-7 gap-0.5">${calendarHTML}</div></div></div>${scheduleSelectedDate?`<div><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">${formatDate(scheduleSelectedDate)}</h3><div class="space-y-2">${selectedDateJobs.length?selectedDateJobs.map(b=>{const sc=statusConfig[b.status]||statusConfig.pending;const sb=serviceTypeConfig[b.booking_details?.service_type]||'bg-gray-100 text-gray-700';return`<div class="schedule-job-card bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer" data-booking-id="${b.id}"><div class="w-2 h-10 ${sc.dot} rounded-full shrink-0"></div><div class="min-w-0 flex-1"><p class="text-sm font-semibold text-gray-800 truncate">${b.customer_info?.name||'Unknown'}</p><div class="flex items-center gap-2 mt-0.5"><span class="text-xs font-medium ${sc.text} capitalize">${(b.status||'pending').replace('_',' ')}</span><span class="text-xs px-1.5 py-0.5 rounded font-medium ${sb}">${b.booking_details?.service_type||''}</span></div></div><span class="text-sm font-bold text-gray-900 shrink-0">$${b.booking_details?.price||0}</span></div>`}).join(''):'<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 text-center text-sm text-gray-400">No jobs on this date</div>'}</div></div>`:''}${upcoming.length?`<div><h3 class="text-xs font-semibold text-gray-400 uppercase tracking-wider mb-2 px-1">Upcoming</h3><div class="space-y-2">${upcoming.slice(0,6).map(b=>{const sc=statusConfig[b.status]||statusConfig.pending;const sb=serviceTypeConfig[b.booking_details?.service_type]||'bg-gray-100 text-gray-700';return`<div class="schedule-job-card bg-white rounded-xl shadow-sm border border-gray-100 p-3 flex items-center gap-3 active:scale-[0.98] transition-transform cursor-pointer" data-booking-id="${b.id}"><div class="flex flex-col items-center shrink-0 w-12"><span class="text-xs font-bold text-gray-500">${new Date(b.booking_details.preferred_date+'T00:00:00').toLocaleDateString('en-US',{month:'short'}).toUpperCase()}</span><span class="text-lg font-bold text-gray-800">${new Date(b.booking_details.preferred_date+'T00:00:00').getDate()}</span></div><div class="min-w-0 flex-1"><p class="text-sm font-semibold text-gray-800 truncate">${b.customer_info?.name||'Unknown'}</p><div class="flex items-center gap-2 mt-0.5"><span class="text-xs font-medium ${sc.text} capitalize">${(b.status||'pending').replace('_',' ')}</span><span class="text-xs px-1.5 py-0.5 rounded font-medium ${sb}">${b.booking_details?.service_type||''}</span><span class="text-xs text-gray-400">${b.booking_details?.preferred_time||''}</span></div></div><span class="text-sm font-bold text-gray-900 shrink-0">$${b.booking_details?.price||0}</span></div>`}).join('')}</div></div>`:`<div class="text-center text-gray-400 py-8"><svg class="w-12 h-12 mx-auto mb-2 text-gray-300" viewBox="0 0 24 24">${iconsSvg.calendar}</svg><p class="text-sm">No upcoming jobs</p></div>`}</div>`
 }
 
 function renderSettingsContent() {
-  return `
-    <div class="space-y-4 pt-2">
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-4">
-        <div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold text-lg">${(session.user.email||'?')[0].toUpperCase()}</div>
-        <div><p class="font-semibold text-gray-800">${session.user.email}</p><p class="text-xs text-gray-400">Driver</p></div>
-      </div>
-      <div class="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-50">
-        <button class="w-full flex items-center gap-3 p-4 text-sm text-gray-500 hover:bg-gray-50 transition"><svg class="w-5 h-5" viewBox="0 0 24 24">${iconsSvg.clock}</svg><span>Activity Log</span><svg class="w-4 h-4 ml-auto text-gray-300" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-        <button class="w-full flex items-center gap-3 p-4 text-sm text-gray-500 hover:bg-gray-50 transition"><svg class="w-5 h-5" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" y1="21" x2="16" y2="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="17" x2="12" y2="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>App Version</span><span class="ml-auto text-xs text-gray-400">1.0.0</span></button>
-      </div>
-      <button id="logout-btn" class="w-full bg-red-50 text-red-600 font-semibold py-3 rounded-xl hover:bg-red-100 active:scale-[0.98] transition text-sm border border-red-200">Sign Out</button>
-    </div>`
+  return `<div class="space-y-4 pt-2"><div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 flex items-center gap-4"><div class="w-12 h-12 bg-emerald-100 rounded-full flex items-center justify-center text-emerald-700 font-bold text-lg">${(session.user.email||'?')[0].toUpperCase()}</div><div><p class="font-semibold text-gray-800">${session.user.email}</p><p class="text-xs text-gray-400">Driver</p></div></div><div class="bg-white rounded-xl shadow-sm border border-gray-100 divide-y divide-gray-50"><button class="w-full flex items-center gap-3 p-4 text-sm text-gray-500 hover:bg-gray-50 transition"><svg class="w-5 h-5" viewBox="0 0 24 24">${iconsSvg.clock}</svg><span>Activity Log</span><svg class="w-4 h-4 ml-auto text-gray-300" viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></button><button class="w-full flex items-center gap-3 p-4 text-sm text-gray-500 hover:bg-gray-50 transition"><svg class="w-5 h-5" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="8" y1="21" x2="16" y2="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><line x1="12" y1="17" x2="12" y2="21" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><span>App Version</span><span class="ml-auto text-xs text-gray-400">1.0.0</span></button></div><button id="logout-btn" class="w-full bg-red-50 text-red-600 font-semibold py-3 rounded-xl hover:bg-red-100 active:scale-[0.98] transition text-sm border border-red-200">Sign Out</button></div>`
 }
 
 function renderApp() {
@@ -390,31 +206,19 @@ function renderApp() {
     pay: () => renderEmptyState('Pay'),
     settings: () => renderSettingsContent(),
   }
-  document.querySelector('#app').innerHTML = `
-    <div class="flex flex-col h-dvh max-w-md mx-auto bg-gray-50 shadow-xl relative overflow-hidden">
-      <header class="bg-emerald-700 text-white px-5 pt-12 pb-4 shrink-0">
-        <div class="flex items-center gap-3">
-          <div class="w-9 h-9 bg-emerald-600 rounded-xl flex items-center justify-center"><svg class="w-5 h-5" viewBox="0 0 24 24">${iconsSvg.package}</svg></div>
-          <div><h1 class="text-lg font-bold leading-tight">Opek Junk Removal</h1><p class="text-emerald-200 text-xs">${session?.user?.email || activeTabData.label}</p></div>
-        </div>
-      </header>
-      <main class="flex-1 overflow-y-auto p-4 relative">${(contentMap[active])()}</main>
-      <nav class="bg-white border-t border-gray-200 flex shrink-0">
-        ${tabs.map(tab => { const isActive = tab.id === active; return `<a href="#tab=${tab.id}" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${isActive?'text-emerald-600':'text-gray-400 hover:text-gray-600'}"><svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${isActive?2.5:1.8}" stroke-linecap="round" stroke-linejoin="round">${iconsSvg[tab.icon]}</svg><span>${tab.label}</span></a>` }).join('')}
-      </nav>
-    </div>`
+  document.querySelector('#app').innerHTML = `<div class="flex flex-col h-dvh max-w-md mx-auto bg-gray-50 shadow-xl relative overflow-hidden"><header class="bg-white border-b border-gray-100 px-5 pt-12 pb-3 shrink-0"><div class="flex items-center justify-between"><div class="flex items-center gap-2.5"><span class="text-lg font-bold text-emerald-700">Opek</span><span class="text-lg font-bold text-gray-400">Driver</span></div><div class="w-7 h-7 bg-emerald-100 rounded-full flex items-center justify-center"><span class="text-xs font-bold text-emerald-700">${(session?.user?.email||'?')[0].toUpperCase()}</span></div></div></header><main class="flex-1 overflow-y-auto p-4 relative">${(contentMap[active])()}</main><nav class="bg-white border-t border-gray-200 flex shrink-0">${tabs.map(tab=>{const isActive=tab.id===active;return`<a href="#tab=${tab.id}" class="flex-1 flex flex-col items-center gap-0.5 py-2 text-xs font-medium transition-colors ${isActive?'text-emerald-600':'text-gray-400 hover:text-gray-600'}"><svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="${isActive?2.5:1.8}" stroke-linecap="round" stroke-linejoin="round">${iconsSvg[tab.icon]}</svg><span>${tab.label}</span></a>`}).join('')}</nav></div>`
   bindEvents(active)
 }
 
 function bindEvents(active) {
   if (active === 'jobs' && !loading && bookings.length) {
-    document.querySelectorAll('.job-card').forEach(card => { card.addEventListener('click', () => { const id = card.dataset.bookingId; selectedBooking = bookings.find(b => b.id === id); if (selectedBooking) showBookingDetail() }) })
+    document.querySelectorAll('.job-card').forEach(card=>{card.addEventListener('click',()=>{const id=card.dataset.bookingId;selectedBooking=bookings.find(b=>b.id===id);if(selectedBooking)showBookingDetail()})})
   }
   if (active === 'schedule') {
-    document.getElementById('prev-month').addEventListener('click', () => { scheduleMonth = new Date(scheduleMonth.getFullYear(), scheduleMonth.getMonth() - 1, 1); renderApp() })
-    document.getElementById('next-month').addEventListener('click', () => { scheduleMonth = new Date(scheduleMonth.getFullYear(), scheduleMonth.getMonth() + 1, 1); renderApp() })
-    document.querySelectorAll('[data-date]').forEach(cell => { cell.addEventListener('click', () => { scheduleSelectedDate = cell.dataset.date; renderApp() }) })
-    document.querySelectorAll('.schedule-job-card').forEach(card => { card.addEventListener('click', () => { const id = card.dataset.bookingId; selectedBooking = bookings.find(b => b.id === id); if (selectedBooking) showBookingDetail() }) })
+    document.getElementById('prev-month').addEventListener('click',()=>{scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth()-1,1);renderApp()})
+    document.getElementById('next-month').addEventListener('click',()=>{scheduleMonth=new Date(scheduleMonth.getFullYear(),scheduleMonth.getMonth()+1,1);renderApp()})
+    document.querySelectorAll('[data-date]').forEach(cell=>{cell.addEventListener('click',()=>{scheduleSelectedDate=cell.dataset.date;renderApp()})})
+    document.querySelectorAll('.schedule-job-card').forEach(card=>{card.addEventListener('click',()=>{const id=card.dataset.bookingId;selectedBooking=bookings.find(b=>b.id===id);if(selectedBooking)showBookingDetail()})})
   }
   if (active === 'settings') {
     const btn = document.getElementById('logout-btn')
@@ -426,7 +230,7 @@ function showBookingDetail() {
   const main = document.querySelector('main')
   if (!main || !selectedBooking) return
   main.insertAdjacentHTML('beforeend', renderBookingDetail(selectedBooking))
-  setTimeout(() => { document.getElementById('close-detail').addEventListener('click', closeBookingDetail) }, 0)
+  setTimeout(()=>{document.getElementById('close-detail').addEventListener('click',closeBookingDetail)},0)
 }
 
 function closeBookingDetail() {
@@ -442,7 +246,6 @@ async function init() {
   session = data.session
   if (session) { renderApp(); loadBookings() }
   else renderLoginPage()
-
   supabase.auth.onAuthStateChange((_event, newSession) => {
     session = newSession
     if (session) { renderApp(); loadBookings() }
