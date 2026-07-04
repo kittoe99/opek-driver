@@ -1,4 +1,5 @@
 @import "tailwindcss";
+@import "leaflet/dist/leaflet.css";
 
 @keyframes slide-up {
   from { transform: translateY(100%); }
@@ -7,4 +8,16 @@
 
 .animate-slide-up {
   animation: slide-up 0.3s ease-out;
+}
+
+.map-label {
+  background: none !important;
+  border: none !important;
+  box-shadow: none !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff;
+  padding: 0 !important;
+  margin: 0 !important;
 }
