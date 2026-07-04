@@ -153,16 +153,17 @@ function renderLoginPage(){
   },0)
 }
 
+function logoBars(cls=''){return`<div class="flex items-end justify-center gap-1 ${cls}"><span class="pl-bar"></span><span class="pl-bar pl-bar-2"></span></div>`}
+
 function renderEmptyState(label,hint){
-  const iconMap={Offers:iconsSvg.bell,Jobs:iconsSvg.briefcase,Schedule:iconsSvg.calendar,Settings:iconsSvg.cog}
-  return`<div class="flex flex-col items-center justify-center h-full text-gray-400 px-6 py-12"><svg class="w-16 h-16 mb-4 text-gray-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round">${iconMap[label]||iconMap['Jobs']}</svg><p class="text-lg font-medium text-gray-500">No ${label.toLowerCase()} yet</p><p class="text-sm text-gray-400 mt-1 text-center">${hint||`Your ${label.toLowerCase()} will appear here`}</p></div>`
+  return`<div class="flex flex-col items-center justify-center h-full text-gray-400 px-6 py-12">${logoBars('mb-4 opacity-20')}<p class="text-lg font-medium text-gray-500">No ${label.toLowerCase()} yet</p><p class="text-sm text-gray-400 mt-1 text-center">${hint||`Your ${label.toLowerCase()} will appear here`}</p></div>`
 }
 
-function renderAppLoading(){return[1,2].map(()=>'<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 animate-pulse mb-3"><div class="h-4 bg-gray-200 rounded w-24 mb-3"></div><div class="h-4 bg-gray-200 rounded w-32 mb-2"></div><div class="h-8 bg-gray-200 rounded w-full mt-4"></div></div>').join('')}
+function renderAppLoading(){return logoBars('my-12 opacity-15')+[1,2].map(()=>'<div class="bg-white rounded-xl shadow-sm border border-gray-100 p-4 animate-pulse mb-3"><div class="h-4 bg-gray-200 rounded w-24 mb-3"></div><div class="h-4 bg-gray-200 rounded w-32 mb-2"></div><div class="h-8 bg-gray-200 rounded w-full mt-4"></div></div>').join('')}
 
 function renderPendingScreen(){
   const isPending=driver?.status==='pending';const isSuspended=driver?.status==='suspended';const noProfile=!driver
-  return`<div class="flex flex-col items-center justify-center h-full px-6 py-12 text-center"><div class="w-16 h-16 rounded-full flex items-center justify-center mb-4 ${isSuspended?'bg-red-100':'bg-amber-100'}"><svg class="w-8 h-8 ${isSuspended?'text-red-600':'text-amber-600'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">${iconsSvg.clock}</svg></div><h2 class="text-lg font-bold text-gray-800 mb-2">${noProfile?'Complete your profile':isSuspended?'Account suspended':'Pending approval'}</h2><p class="text-sm text-gray-500 max-w-xs">${noProfile?'Contact support to link your contractor account, or sign out and create a new driver account.':isSuspended?'Your driver account has been suspended. Contact Opek support for help.':'Your application is under review. You will see job offers here once an admin approves your account.'}</p>${driver&&serviceAreas.length?`<p class="text-xs text-gray-400 mt-4">Service areas: ${serviceAreas.join(', ')}</p>`:''}<button id="logout-btn" class="mt-8 text-sm text-red-600 font-medium">Sign out</button></div>`
+  return`<div class="flex flex-col items-center justify-center h-full px-6 py-12 text-center">${logoBars('mb-4 opacity-30')}<h2 class="text-lg font-bold text-gray-800 mb-2">${noProfile?'Complete your profile':isSuspended?'Account suspended':'Pending approval'}</h2><p class="text-sm text-gray-500 max-w-xs">${noProfile?'Contact support to link your contractor account, or sign out and create a new driver account.':isSuspended?'Your driver account has been suspended. Contact Opek support for help.':'Your application is under review. You will see job offers here once an admin approves your account.'}</p>${driver&&serviceAreas.length?`<p class="text-xs text-gray-400 mt-4">Service areas: ${serviceAreas.join(', ')}</p>`:''}<button id="logout-btn" class="mt-8 text-sm text-red-600 font-medium">Sign out</button></div>`
 }
 
 function offerCard(assignment){
