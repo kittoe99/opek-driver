@@ -318,7 +318,11 @@ function inlineEdit({btnId, displayId, currentValue, onSave, multiLine=false}){
   const btn=document.getElementById(btnId)
   const display=document.getElementById(displayId)
   if(!btn||!display)return
+  const editIcon=btn.querySelector('svg')
   const parent=display.parentElement
+  btn.classList.remove('cursor-pointer','active:bg-gray-50')
+  btn.style.pointerEvents='none'
+  if(editIcon)editIcon.style.display='none'
   const wrapper=document.createElement('div')
   wrapper.className='flex-1'
   const input=document.createElement(multiLine?'textarea':'input')
@@ -338,9 +342,13 @@ function inlineEdit({btnId, displayId, currentValue, onSave, multiLine=false}){
   wrapper.appendChild(actions)
   actions.appendChild(saveBtn)
   actions.appendChild(cancelBtn)
-  btn.style.display='none'
   parent.replaceChild(wrapper,display)
-  const done=()=>{wrapper.replaceWith(display);btn.style.display=''}
+  const done=()=>{
+    wrapper.replaceWith(display)
+    btn.classList.add('cursor-pointer','active:bg-gray-50')
+    btn.style.pointerEvents=''
+    if(editIcon)editIcon.style.display=''
+  }
   cancelBtn.addEventListener('click',done)
   saveBtn.addEventListener('click',async()=>{
     const v=input.value.trim()
