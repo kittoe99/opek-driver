@@ -33,6 +33,11 @@
 .map-pin {
   background: none !important;
   border: none !important;
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,0.3));
+}
+
+.leaflet-tile {
+  filter: hue-rotate(210deg) saturate(0.4) brightness(0.95) !important;
 }
 
 .leaflet-popup-content-wrapper {
