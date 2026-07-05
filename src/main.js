@@ -143,8 +143,31 @@ async function loadDriverData(){
   if(!rpcError&&rpcDriver)driverRow=rpcDriver
   else{const uid=session?.user?.id;if(uid){await supabase.rpc('register_driver',{p_full_name:'',p_phone:'',p_states:[]});const{data:linked}=await supabase.from('drivers').select('*').eq('user_id',uid).maybeSingle();driverRow=linked}}
   driver=driverRow||null
-  if(driver){const{data:areas}=await supabase.from('driver_service_areas').select('state').eq('driver_id',driver.id).order('state');serviceAreas=(areas||[]).map(a=>a.state);if(driver.provider_signup_id){const{data:signup}=await supabase.from('provider_signups').select('*').eq('id',driver.provider_signup_id).maybeSingle();if(signup){const pi=signup.provider_info||{};signup._n={businessName:pi.business_name||pi.availability?.businessName||'',coverageArea:(Array.isArray(pi.service_areas)?pi.service_areas.map(s=>s.metroArea||s.city||s.state).filter(Boolean).join(', '):'')||pi.service_area||'',vehicleType:pi.vehicle?.type||pi.vehicle_type||'',schedule:Array.isArray(pi.availability?.schedule)?pi.availability.schedule:(typeof pi.availability==='string'&&pi.availability?[pi.availability]:[]),additionalInfo:pi.additional_info??pi.availability?.additionalInfo??''}};providerSignup=signup||null}else{providerSignup=null}}
-  else{serviceAreas=[];providerSignup=null}
+   if(driver){
+    const{data:areas}=await supabase.from('driver_service_areas').select('state').eq('driver_id',driver.id).order('state')
+    serviceAreas=(areas||[]).map(a=>a.state)
+    if(driver.provider_signup_id){
+      const{data:signup}=await supabase.from('provider_signups').select('*').eq('id',driver.provider_signup_id).maybeSingle()
+      if(signup){
+        const pi=signup.provider_info||{}
+        const v=pi.vehicle||{}
+        signup._n={
+          businessName:pi.business_name||pi.availability?.businessName||'',
+          coverageArea:(Array.isArray(pi.service_areas)?pi.service_areas.map(s=>`${s.metroArea||s.city||s.state}, ${s.state||''}`).filter(Boolean).join('; '):'')||pi.service_area||'',
+          vehicleType:v.type||pi.vehicle_type||'',
+          vehicleYear:v.year||'',
+          vehicleMake:v.make||'',
+          vehicleModel:v.model||'',
+          vehicleImages:Array.isArray(v.images)?v.images:[],
+          insuranceDocs:Array.isArray(v.insurance)?v.insurance:[],
+          availability:typeof pi.availability==='string'&&pi.availability?pi.availability:'',
+          schedule:Array.isArray(pi.availability?.schedule)?pi.availability.schedule:[],
+          additionalInfo:pi.additional_info??pi.availability?.additionalInfo??''
+        }
+        providerSignup=signup
+      }else{providerSignup=null}
+    }else{providerSignup=null}
+    }else{serviceAreas=[];providerSignup=null}
   if(!driver||driver.status!=='approved'){assignments=[];bookingsById={};return}
   const{data:jobRows,error:jobError}=await supabase.rpc('get_my_jobs')
   if(jobError)console.error('get_my_jobs error:',jobError)
@@ -234,7 +257,7 @@ function renderSettingsContent(){
 
   const editRight=`<span class="flex items-center gap-1.5 text-[11px] font-medium text-brand"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit</span>`
 
-  const providerInfo=providerSignup?(()=>{const n=providerSignup._n||{};let rows='';if(n.businessName)rows+=`<div class="px-4 py-3 flex items-center justify-between active:bg-gray-50 cursor-pointer transition" id="edit-business-name-btn"><div class="min-w-0 flex-1"><p class="text-xs text-gray-500">Business Name</p><p class="text-sm font-medium text-gray-800 truncate" id="display-business-name">${n.businessName}</p></div>${editRight}</div>`;if(n.coverageArea)rows+=`<div class="px-4 py-3 flex items-center justify-between active:bg-gray-50 cursor-pointer transition border-t border-gray-50" id="edit-coverage-area-btn"><div class="min-w-0 flex-1"><p class="text-xs text-gray-500">Coverage Area</p><p class="text-sm font-medium text-gray-800 truncate" id="display-coverage-area">${n.coverageArea}</p></div>${editRight}</div>`;if(n.vehicleType)rows+=`<div class="px-4 py-3 flex items-center justify-between active:bg-gray-50 cursor-pointer transition border-t border-gray-50" id="edit-signup-vehicle-btn"><div class="min-w-0 flex-1"><p class="text-xs text-gray-500">Vehicle on Application</p><p class="text-sm font-medium text-gray-800 truncate" id="display-signup-vehicle">${n.vehicleType}</p></div>${editRight}</div>`;if(n.schedule&&n.schedule.length)rows+=`<div class="px-4 py-3 active:bg-gray-50 cursor-pointer transition border-t border-gray-50" id="edit-availability-btn"><div class="flex items-center justify-between mb-2"><p class="text-xs text-gray-500">Availability</p>${editRight}</div><div class="flex flex-wrap gap-1.5" id="display-availability">${n.schedule.map(s=>`<span class="text-[11px] bg-brand-50 text-brand-700 font-medium px-2 py-1 rounded-lg">${s}</span>`).join('')}</div></div>`;if(n.additionalInfo)rows+=`<div class="px-4 py-3 flex items-center justify-between active:bg-gray-50 cursor-pointer transition border-t border-gray-50" id="edit-additional-info-btn"><div class="min-w-0 flex-1"><p class="text-xs text-gray-500">Additional Info</p><p class="text-sm text-gray-600 truncate" id="display-additional-info">${n.additionalInfo}</p></div>${editRight}</div>`;return rows})():null
+  const providerInfo=providerSignup?(()=>{const n=providerSignup._n||{};const vd=[n.vehicleType,n.vehicleYear,n.vehicleMake,n.vehicleModel].filter(Boolean).join(' ');let rows='';if(n.businessName)rows+=`<div class="px-4 py-3 flex items-center justify-between active:bg-gray-50 cursor-pointer transition" id="edit-business-name-btn"><div class="min-w-0 flex-1"><p class="text-xs text-gray-500">Business Name</p><p class="text-sm font-medium text-gray-800 truncate" id="display-business-name">${n.businessName}</p></div>${editRight}</div>`;if(n.coverageArea)rows+=`<div class="px-4 py-3 flex items-center justify-between active:bg-gray-50 cursor-pointer transition border-t border-gray-50" id="edit-coverage-area-btn"><div class="min-w-0 flex-1"><p class="text-xs text-gray-500">Coverage Area</p><p class="text-sm font-medium text-gray-800 truncate" id="display-coverage-area">${n.coverageArea}</p></div>${editRight}</div>`;if(vd)rows+=`<div class="px-4 py-3 flex items-center justify-between active:bg-gray-50 cursor-pointer transition border-t border-gray-50" id="edit-signup-vehicle-btn"><div class="min-w-0 flex-1"><p class="text-xs text-gray-500">Vehicle on Application</p><p class="text-sm font-medium text-gray-800 truncate" id="display-signup-vehicle">${vd||'Not set'}</p></div>${editRight}</div>`;if(n.vehicleImages?.length)rows+=`<div class="px-4 py-3 border-t border-gray-50"><p class="text-xs text-gray-500 mb-2">Vehicle Photos</p><div class="flex gap-2 overflow-x-auto">${n.vehicleImages.map(u=>`<img src="${u}" class="w-16 h-16 object-cover rounded-lg border border-gray-100" alt="Vehicle"/>`).join('')}</div></div>`;if(n.availability)rows+=`<div class="px-4 py-3 flex items-center justify-between active:bg-gray-50 cursor-pointer transition border-t border-gray-50" id="edit-availability-btn"><div class="min-w-0 flex-1"><p class="text-xs text-gray-500">Availability</p><p class="text-sm font-medium text-gray-800" id="display-availability">${n.availability==='few_jobs'?'A Few Jobs a Week':n.availability==='many_jobs'?'As Many as Possible':n.availability}</p></div>${editRight}</div>`;if(n.additionalInfo)rows+=`<div class="px-4 py-3 flex items-center justify-between active:bg-gray-50 cursor-pointer transition border-t border-gray-50" id="edit-additional-info-btn"><div class="min-w-0 flex-1"><p class="text-xs text-gray-500">Additional Info</p><p class="text-sm text-gray-600 truncate" id="display-additional-info">${n.additionalInfo}</p></div>${editRight}</div>`;return rows})():null
 
   const serviceAreaHtml=serviceAreas.length?`<div class="flex flex-wrap gap-1.5">${serviceAreas.map(s=>`<span class="text-xs bg-gray-100 text-gray-700 font-medium px-2.5 py-1 rounded-lg">${s}</span>`).join('')}</div>`:''
 
@@ -314,7 +337,7 @@ function renderApp(){
   bindEvents(active,showMainApp)
 }
 
-function inlineEdit({btnId, displayId, currentValue, onSave, multiLine=false}){
+function inlineEdit({btnId, displayId, currentValue, onSave, multiLine=false, type='text', options=[]}){
   const display=document.getElementById(displayId)
   if(!display)return
   const btn=document.getElementById(btnId)
@@ -324,11 +347,18 @@ function inlineEdit({btnId, displayId, currentValue, onSave, multiLine=false}){
   if(editIcon)editIcon.style.display='none'
   const wrapper=document.createElement('div')
   wrapper.className='flex-1'
-  const input=document.createElement(multiLine?'textarea':'input')
-  input.value=currentValue||''
-  input.className='w-full px-3 py-2 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent bg-white'
-  if(!multiLine)input.type='text'
-  else{input.rows=2;input.className+=' resize-none'}
+  let input
+  if(type==='select'){
+    input=document.createElement('select')
+    input.className='w-full px-3 py-2 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent bg-white appearance-none'
+    options.forEach(o=>{const opt=document.createElement('option');opt.value=o.value;opt.textContent=o.label;if(o.value===currentValue)opt.selected=true;input.appendChild(opt)})
+  }else{
+    input=document.createElement(multiLine?'textarea':'input')
+    input.value=currentValue||''
+    input.className='w-full px-3 py-2 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent bg-white'
+    if(!multiLine)input.type='text'
+    else{input.rows=2;input.className+=' resize-none'}
+  }
   const actions=document.createElement('div')
   actions.className='flex gap-1.5 mt-2'
   const saveBtn=document.createElement('button')
@@ -355,7 +385,7 @@ function inlineEdit({btnId, displayId, currentValue, onSave, multiLine=false}){
     finally{if(saveBtn.isConnected){saveBtn.disabled=false;saveBtn.textContent='Save'}}
   })
   input.focus()
-  if(!multiLine)input.select()
+  if(!multiLine&&type!=='select'&&input.select)input.select()
 }
 
 function bindEvents(active,showApp=true){
@@ -386,11 +416,11 @@ function bindEvents(active,showApp=true){
     document.getElementById('edit-vehicle-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-vehicle-btn',displayId:'display-vehicle',currentValue:driver?.vehicle_type||'',onSave:async(v)=>{const{error}=await supabase.from('drivers').update({vehicle_type:v}).eq('id',driver.id);if(error)throw error;driver={...driver,vehicle_type:v};render()}})})
     if(providerSignup){
       const saveProviderInfo=async(pi)=>{const{error}=await supabase.from('provider_signups').update({provider_info:pi}).eq('id',providerSignup.id);if(error)throw error;providerSignup={...providerSignup,provider_info:pi};render()}
-      document.getElementById('edit-business-name-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-business-name-btn',displayId:'display-business-name',currentValue:providerSignup._n?.businessName||'',onSave:async(v)=>{const pi={...providerSignup.provider_info};pi.business_name=v;const av=typeof pi.availability==='object'?pi.availability:{};av.businessName=v;pi.availability=av;await saveProviderInfo(pi)}})})
-      document.getElementById('edit-coverage-area-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-coverage-area-btn',displayId:'display-coverage-area',currentValue:providerSignup._n?.coverageArea||'',onSave:async(v)=>{const pi={...providerSignup.provider_info};pi.service_area=v;if(Array.isArray(pi.service_areas)&&pi.service_areas.length){pi.service_areas[0].metroArea=v}else{pi.service_areas=[{state:'',metroArea:v}]}await saveProviderInfo(pi)}})})
-      document.getElementById('edit-signup-vehicle-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-signup-vehicle-btn',displayId:'display-signup-vehicle',currentValue:providerSignup._n?.vehicleType||'',onSave:async(v)=>{const pi={...providerSignup.provider_info};pi.vehicle_type=v;if(!pi.vehicle)pi.vehicle={};pi.vehicle.type=v;await saveProviderInfo(pi)}})})
-      document.getElementById('edit-availability-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-availability-btn',displayId:'display-availability',currentValue:(providerSignup._n?.schedule||[]).join(', '),multiLine:true,onSave:async(v)=>{const list=v.split(/,\s*/).map(s=>s.trim()).filter(Boolean);if(!list.length)throw new Error('Enter at least one availability slot');const pi={...providerSignup.provider_info};const av=typeof pi.availability==='object'?pi.availability:{};av.schedule=list;pi.availability=av;await saveProviderInfo(pi)}})})
-      document.getElementById('edit-additional-info-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-additional-info-btn',displayId:'display-additional-info',currentValue:providerSignup._n?.additionalInfo||'',multiLine:true,onSave:async(v)=>{const pi={...providerSignup.provider_info};pi.additional_info=v;const av=typeof pi.availability==='object'?pi.availability:{};av.additionalInfo=v;pi.availability=av;await saveProviderInfo(pi)}})})
+      document.getElementById('edit-business-name-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-business-name-btn',displayId:'display-business-name',currentValue:providerSignup._n?.businessName||'',onSave:async(v)=>{const pi={...providerSignup.provider_info};pi.business_name=v;await saveProviderInfo(pi)}})})
+      document.getElementById('edit-coverage-area-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-coverage-area-btn',displayId:'display-coverage-area',currentValue:providerSignup._n?.coverageArea||'',onSave:async(v)=>{const pi={...providerSignup.provider_info};pi.service_area=v;await saveProviderInfo(pi)}})})
+      document.getElementById('edit-signup-vehicle-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-signup-vehicle-btn',displayId:'display-signup-vehicle',currentValue:[providerSignup._n?.vehicleType,providerSignup._n?.vehicleYear,providerSignup._n?.vehicleMake,providerSignup._n?.vehicleModel].filter(Boolean).join(' '),onSave:async(v)=>{const parts=v.split(/\s+/);const pi={...providerSignup.provider_info};if(!pi.vehicle)pi.vehicle={};pi.vehicle.type=parts[0]||'';pi.vehicle_type=parts[0]||'';if(parts.length>1){pi.vehicle.year=parts[1];pi.vehicle.make=parts[2]||'';pi.vehicle.model=parts.slice(3).join(' ')||''}await saveProviderInfo(pi)}})})
+      document.getElementById('edit-availability-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-availability-btn',displayId:'display-availability',currentValue:providerSignup._n?.availability||'',type:'select',options:[{value:'few_jobs',label:'A Few Jobs a Week'},{value:'many_jobs',label:'As Many as Possible'}],onSave:async(v)=>{const pi={...providerSignup.provider_info};pi.availability=v;await saveProviderInfo(pi)}})})
+      document.getElementById('edit-additional-info-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-additional-info-btn',displayId:'display-additional-info',currentValue:providerSignup._n?.additionalInfo||'',multiLine:true,onSave:async(v)=>{const pi={...providerSignup.provider_info};pi.additional_info=v;await saveProviderInfo(pi)}})})
     }
     const b=document.getElementById('logout-btn');if(b)b.addEventListener('click',async()=>{await supabase.auth.signOut();session=null;window.location.hash='';renderLoginPage()})
   }
