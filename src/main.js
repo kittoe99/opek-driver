@@ -314,6 +314,45 @@ function renderApp(){
   bindEvents(active,showMainApp)
 }
 
+function inlineEdit({btnId, displayId, currentValue, onSave, multiLine=false}){
+  const btn=document.getElementById(btnId)
+  const display=document.getElementById(displayId)
+  if(!btn||!display)return
+  const parent=display.parentElement
+  const wrapper=document.createElement('div')
+  wrapper.className='flex-1'
+  const input=document.createElement(multiLine?'textarea':'input')
+  input.value=currentValue||''
+  input.className='w-full px-3 py-2 rounded-xl border border-gray-300 text-sm focus:outline-none focus:ring-2 focus:ring-brand focus:border-transparent bg-white'
+  if(!multiLine)input.type='text'
+  else{input.rows=2;input.className+=' resize-none'}
+  const actions=document.createElement('div')
+  actions.className='flex gap-1.5 mt-2'
+  const saveBtn=document.createElement('button')
+  saveBtn.textContent='Save'
+  saveBtn.className='text-xs font-semibold bg-brand text-white px-3 py-1.5 rounded-lg active:scale-95 transition'
+  const cancelBtn=document.createElement('button')
+  cancelBtn.textContent='Cancel'
+  cancelBtn.className='text-xs font-semibold text-gray-500 px-3 py-1.5 rounded-lg hover:bg-gray-100 active:scale-95 transition'
+  wrapper.appendChild(input)
+  wrapper.appendChild(actions)
+  actions.appendChild(saveBtn)
+  actions.appendChild(cancelBtn)
+  btn.style.display='none'
+  parent.replaceChild(wrapper,display)
+  const done=()=>{wrapper.replaceWith(display);btn.style.display=''}
+  cancelBtn.addEventListener('click',done)
+  saveBtn.addEventListener('click',async()=>{
+    const v=input.value.trim()
+    if(!v){input.focus();return}
+    saveBtn.disabled=true;saveBtn.textContent='Saving...'
+    try{await onSave(v);display.textContent=v;done()}catch(e){alert(e.message||'Save failed')}
+    finally{saveBtn.disabled=false;saveBtn.textContent='Save'}
+  })
+  input.focus()
+  if(!multiLine)input.select()
+}
+
 function bindEvents(active,showApp=true){
   if(!showApp){const b=document.getElementById('logout-btn');if(b)b.addEventListener('click',async()=>{await supabase.auth.signOut();session=null;driver=null;window.location.hash='';renderLoginPage()});return}
   document.getElementById('avatar-btn')?.addEventListener('click',(e)=>{e.stopPropagation();const dd=document.getElementById('avatar-dropdown');dd.classList.toggle('hidden')})
@@ -337,16 +376,16 @@ function bindEvents(active,showApp=true){
     document.querySelectorAll('.accept-offer-btn').forEach(btn=>btn.addEventListener('click',async(e)=>{e.stopPropagation();const id=btn.dataset.assignmentId;btn.disabled=true;const{error}=await supabase.rpc('accept_job_assignment',{p_assignment_id:id});if(error){alert(error.message);btn.disabled=false;return};await loadDriverData()}))
   }
   if(active==='settings'){
-    document.getElementById('edit-name-btn')?.addEventListener('click',async()=>{const v=prompt('Full name',driver?.full_name||'');if(v===null||!v.trim())return;const{error}=await supabase.from('drivers').update({full_name:v.trim()}).eq('id',driver.id);if(!error){driver={...driver,full_name:v.trim()};loadDriverData()}})
-    document.getElementById('edit-phone-btn')?.addEventListener('click',async()=>{const v=prompt('Phone number',driver?.phone||'');if(v===null||!v.trim())return;const{error}=await supabase.from('drivers').update({phone:v.trim()}).eq('id',driver.id);if(!error){driver={...driver,phone:v.trim()};loadDriverData()}})
-    document.getElementById('edit-vehicle-btn')?.addEventListener('click',async()=>{const v=prompt('Vehicle type (e.g. Pickup Truck, Box Truck)',driver?.vehicle_type||'');if(v===null)return;const{error}=await supabase.from('drivers').update({vehicle_type:v.trim()}).eq('id',driver.id);if(!error){driver={...driver,vehicle_type:v.trim()};loadDriverData()}})
+    document.getElementById('edit-name-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-name-btn',displayId:'display-name',currentValue:driver?.full_name||'',onSave:async(v)=>{const{error}=await supabase.from('drivers').update({full_name:v}).eq('id',driver.id);if(error)throw error;driver={...driver,full_name:v};loadDriverData()}})})
+    document.getElementById('edit-phone-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-phone-btn',displayId:'display-phone',currentValue:driver?.phone||'',onSave:async(v)=>{const{error}=await supabase.from('drivers').update({phone:v}).eq('id',driver.id);if(error)throw error;driver={...driver,phone:v};loadDriverData()}})})
+    document.getElementById('edit-vehicle-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-vehicle-btn',displayId:'display-vehicle',currentValue:driver?.vehicle_type||'',onSave:async(v)=>{const{error}=await supabase.from('drivers').update({vehicle_type:v}).eq('id',driver.id);if(error)throw error;driver={...driver,vehicle_type:v};loadDriverData()}})})
     if(providerSignup){
       const saveProviderInfo=async(pi)=>{const{error}=await supabase.from('provider_signups').update({provider_info:pi}).eq('id',providerSignup.id);if(!error){providerSignup={...providerSignup,provider_info:pi};loadDriverData()}}
-      document.getElementById('edit-business-name-btn')?.addEventListener('click',async()=>{const v=prompt('Business name',providerSignup._n?.businessName||'');if(v===null||!v.trim())return;const pi={...providerSignup.provider_info};pi.business_name=v.trim();const av=typeof pi.availability==='object'?pi.availability:{};av.businessName=v.trim();pi.availability=av;await saveProviderInfo(pi)})
-      document.getElementById('edit-coverage-area-btn')?.addEventListener('click',async()=>{const v=prompt('Coverage area (e.g. Denver, Aurora)',providerSignup._n?.coverageArea||'');if(v===null||!v.trim())return;const pi={...providerSignup.provider_info};pi.service_area=v.trim();if(Array.isArray(pi.service_areas)&&pi.service_areas.length){pi.service_areas[0].metroArea=v.trim()}else{pi.service_areas=[{state:'',metroArea:v.trim()}]}await saveProviderInfo(pi)})
-      document.getElementById('edit-signup-vehicle-btn')?.addEventListener('click',async()=>{const v=prompt('Vehicle type (e.g. Box Truck, Dump Truck)',providerSignup._n?.vehicleType||'');if(v===null)return;const pi={...providerSignup.provider_info};pi.vehicle_type=v.trim();if(!pi.vehicle)pi.vehicle={};pi.vehicle.type=v.trim();await saveProviderInfo(pi)})
-      document.getElementById('edit-availability-btn')?.addEventListener('click',async()=>{const current=(providerSignup._n?.schedule||[]).join(', ');const v=prompt('Availability (comma-separated, e.g. Weekday Mornings, Weekend Afternoons)',current);if(v===null)return;const list=v.split(/,\s*/).map(s=>s.trim()).filter(Boolean);if(!list.length)return;const pi={...providerSignup.provider_info};const av=typeof pi.availability==='object'?pi.availability:{};av.schedule=list;pi.availability=av;await saveProviderInfo(pi)})
-      document.getElementById('edit-additional-info-btn')?.addEventListener('click',async()=>{const v=prompt('Additional info',providerSignup._n?.additionalInfo||'');if(v===null)return;const pi={...providerSignup.provider_info};pi.additional_info=v.trim();const av=typeof pi.availability==='object'?pi.availability:{};av.additionalInfo=v.trim();pi.availability=av;await saveProviderInfo(pi)})
+      document.getElementById('edit-business-name-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-business-name-btn',displayId:'display-business-name',currentValue:providerSignup._n?.businessName||'',onSave:async(v)=>{const pi={...providerSignup.provider_info};pi.business_name=v;const av=typeof pi.availability==='object'?pi.availability:{};av.businessName=v;pi.availability=av;await saveProviderInfo(pi)}})})
+      document.getElementById('edit-coverage-area-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-coverage-area-btn',displayId:'display-coverage-area',currentValue:providerSignup._n?.coverageArea||'',onSave:async(v)=>{const pi={...providerSignup.provider_info};pi.service_area=v;if(Array.isArray(pi.service_areas)&&pi.service_areas.length){pi.service_areas[0].metroArea=v}else{pi.service_areas=[{state:'',metroArea:v}]}await saveProviderInfo(pi)}})})
+      document.getElementById('edit-signup-vehicle-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-signup-vehicle-btn',displayId:'display-signup-vehicle',currentValue:providerSignup._n?.vehicleType||'',onSave:async(v)=>{const pi={...providerSignup.provider_info};pi.vehicle_type=v;if(!pi.vehicle)pi.vehicle={};pi.vehicle.type=v;await saveProviderInfo(pi)}})})
+      document.getElementById('edit-availability-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-availability-btn',displayId:'display-availability',currentValue:(providerSignup._n?.schedule||[]).join(', '),multiLine:true,onSave:async(v)=>{const list=v.split(/,\s*/).map(s=>s.trim()).filter(Boolean);if(!list.length)throw new Error('Enter at least one availability slot');const pi={...providerSignup.provider_info};const av=typeof pi.availability==='object'?pi.availability:{};av.schedule=list;pi.availability=av;await saveProviderInfo(pi)}})})
+      document.getElementById('edit-additional-info-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-additional-info-btn',displayId:'display-additional-info',currentValue:providerSignup._n?.additionalInfo||'',multiLine:true,onSave:async(v)=>{const pi={...providerSignup.provider_info};pi.additional_info=v;const av=typeof pi.availability==='object'?pi.availability:{};av.additionalInfo=v;pi.availability=av;await saveProviderInfo(pi)}})})
     }
     const b=document.getElementById('logout-btn');if(b)b.addEventListener('click',async()=>{await supabase.auth.signOut();session=null;window.location.hash='';renderLoginPage()})
   }
