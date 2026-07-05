@@ -60,6 +60,7 @@ let providerSignup = null
 let assignments = []
 let bookingsById = {}
 let loading = true
+let loadingGuard = false
 let authView = 'login'
 let selectedBooking = null
 let selectedAssignment = null
@@ -123,7 +124,8 @@ function renderBookingDetail(booking,assignment){
 }
 
 async function loadDriverData(){
-  loading=true;render()
+  if(loadingGuard)return
+  loadingGuard=true;loading=true;render()
   try{
   let driverRow=null
   const{data:rpcDriver,error:rpcError}=await supabase.rpc('get_my_driver')
@@ -137,7 +139,7 @@ async function loadDriverData(){
   if(jobError)console.error('get_my_jobs error:',jobError)
   if(jobRows?.length){assignments=jobRows.map(r=>({id:r.assignment_id,booking_id:r.booking_id,driver_id:r.driver_id,status:r.status,assigned_at:r.assigned_at,responded_at:r.responded_at,completed_at:r.completed_at,note:r.note}));const seen={};for(const r of jobRows){if(!seen[r.booking_id])seen[r.booking_id]={id:r.booking_id,order_number:r.order_number,customer_info:r.customer_info,location_info:r.location_info,booking_details:r.booking_details,status:r.status};else if(r.status==='in_progress')seen[r.booking_id].status=r.status};bookingsById=seen}
   else{assignments=[];bookingsById={}}
-  }finally{loading=false;window.__app={assignments,bookingsById,driver,serviceAreas,providerSignup};console.log('loaded',assignments.length,'assignments,',Object.keys(bookingsById).length,'bookings, driver_id:',driver?.id,'session_uid:',session?.user?.id);render()}
+  }finally{loading=false;loadingGuard=false;window.__app={assignments,bookingsById,driver,serviceAreas,providerSignup};console.log('loaded',assignments.length,'assignments,',Object.keys(bookingsById).length,'bookings, driver_id:',driver?.id,'session_uid:',session?.user?.id);render()}
 }
 
 function renderLoginPage(){
@@ -389,7 +391,7 @@ function clearSignature(){completionSignature=null;updateSignaturePreview()}
 
 async function uploadDataUrl(dataUrl,path){const base64=dataUrl.split(',')[1];const binary=atob(base64);const bytes=new Uint8Array(binary.length);for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);const blob=new Blob([bytes],{type:'image/png'});const file=new File([blob],path.split('/').pop(),{type:'image/png'});const{error}=await supabase.storage.from('booking-photos').upload(path,file,{contentType:'image/png',upsert:true});if(error)throw error;const{data:urlData}=supabase.storage.from('booking-photos').getPublicUrl(path);return urlData.publicUrl}
 
-async function handleCompletionSubmit(){const btn=document.getElementById('submit-completion');if(!btn||!selectedAssignment||!driver)return;const customerName=document.getElementById('completion-customer-name')?.value?.trim()||'';const notes=document.getElementById('completion-notes')?.value?.trim()||'';if(completionRating===0){alert('Please select a rating');return}if(!customerName){alert('Please enter the customer name');return};btn.disabled=true;btn.textContent='Submitting...';const savedHash=window.location.hash;try{const ts=Date.now();const basePath=`completions/${selectedAssignment.id}`;const photoUrls=[];for(let i=0;i<completionPhotos.length;i++){const url=await uploadDataUrl(completionPhotos[i].dataUrl,`${basePath}/photo_${ts}_${i}.png`);photoUrls.push(url)}let signatureUrl=null;if(completionSignature)signatureUrl=await uploadDataUrl(completionSignature,`${basePath}/signature_${ts}.png`);const{error}=await supabase.rpc('complete_job_with_details',{p_assignment_id:selectedAssignment.id,p_rating:completionRating,p_customer_name:customerName,p_customer_signature_url:signatureUrl,p_notes:notes||null,p_completion_photo_urls:photoUrls});if(error)throw error;closeCompletionForm();closeBookingDetail()}catch(err){alert(err.message||'Failed to submit completion');if(btn.isConnected){btn.disabled=false;btn.textContent='Submit Completion'}return}try{await loadDriverData()}catch(e){console.error('Data refresh failed:',e)}if(savedHash&&window.location.hash!==savedHash)window.location.hash=savedHash}
+async function handleCompletionSubmit(){const btn=document.getElementById('submit-completion');if(!btn||!selectedAssignment||!driver)return;const customerName=document.getElementById('completion-customer-name')?.value?.trim()||'';const notes=document.getElementById('completion-notes')?.value?.trim()||'';if(completionRating===0){alert('Please select a rating');return}if(!customerName){alert('Please enter the customer name');return};btn.disabled=true;btn.textContent='Submitting...';const savedHash=window.location.hash;try{const ts=Date.now();const basePath=`completions/${selectedAssignment.id}`;const photoUrls=[];for(let i=0;i<completionPhotos.length;i++){const url=await uploadDataUrl(completionPhotos[i].dataUrl,`${basePath}/photo_${ts}_${i}.png`);photoUrls.push(url)}let signatureUrl=null;if(completionSignature)signatureUrl=await uploadDataUrl(completionSignature,`${basePath}/signature_${ts}.png`);const{error}=await supabase.rpc('complete_job_with_details',{p_assignment_id:selectedAssignment.id,p_rating:completionRating,p_customer_name:customerName,p_customer_signature_url:signatureUrl,p_notes:notes||null,p_completion_photo_urls:photoUrls});if(error)throw error;closeCompletionForm();closeBookingDetail();await loadDriverData()}catch(err){alert(err.message||'Failed to submit completion');if(btn.isConnected){btn.disabled=false;btn.textContent='Submit Completion'}return}if(savedHash&&window.location.hash!==savedHash){window.location.hash=savedHash;render()}}
 
 function closeBookingDetail(){const d=document.getElementById('booking-detail');if(d)d.remove();selectedBooking=null;selectedAssignment=null}
 
@@ -399,7 +401,7 @@ function initScheduleMap(){const L=window.L;if(!L)return;const container=documen
 
 function render(){renderApp()}
 
-async function init(){loading=true;const{data}=await supabase.auth.getSession();session=data.session;if(session){await loadDriverData()}else{loading=false;renderLoginPage()}supabase.auth.onAuthStateChange(async(event,newSession)=>{if(event==='INITIAL_SESSION'||event==='TOKEN_REFRESHED')return;session=newSession;if(session){await loadDriverData()}else{loading=false;driver=null;assignments=[];bookingsById={};window.location.hash='';renderLoginPage()}})}
+async function init(){loading=true;const{data}=await supabase.auth.getSession();session=data.session;if(session){await loadDriverData()}else{loading=false;renderLoginPage()}supabase.auth.onAuthStateChange(async(event,newSession)=>{if(event==='INITIAL_SESSION'||event==='TOKEN_REFRESHED'||event==='SIGNED_IN')return;session=newSession;if(session){await loadDriverData()}else{loading=false;loadingGuard=false;driver=null;assignments=[];bookingsById={};window.location.hash='';renderLoginPage()}})}
 
 init()
 window.addEventListener('hashchange',()=>{if(session)renderApp()})
