@@ -315,13 +315,12 @@ function renderApp(){
 }
 
 function inlineEdit({btnId, displayId, currentValue, onSave, multiLine=false}){
-  const btn=document.getElementById(btnId)
   const display=document.getElementById(displayId)
-  if(!btn||!display)return
+  if(!display)return
+  const btn=document.getElementById(btnId)
+  if(!btn)return
   const editIcon=btn.querySelector('svg')
   const parent=display.parentElement
-  btn.classList.remove('cursor-pointer','active:bg-gray-50')
-  btn.style.pointerEvents='none'
   if(editIcon)editIcon.style.display='none'
   const wrapper=document.createElement('div')
   wrapper.className='flex-1'
@@ -344,18 +343,16 @@ function inlineEdit({btnId, displayId, currentValue, onSave, multiLine=false}){
   actions.appendChild(cancelBtn)
   parent.replaceChild(wrapper,display)
   const done=()=>{
-    wrapper.replaceWith(display)
-    btn.classList.add('cursor-pointer','active:bg-gray-50')
-    btn.style.pointerEvents=''
-    if(editIcon)editIcon.style.display=''
+    if(wrapper.parentElement)wrapper.replaceWith(display)
+    if(btn&&editIcon&&editIcon.isConnected)editIcon.style.display=''
   }
   cancelBtn.addEventListener('click',done)
   saveBtn.addEventListener('click',async()=>{
     const v=input.value.trim()
     if(!v){input.focus();return}
     saveBtn.disabled=true;saveBtn.textContent='Saving...'
-    try{await onSave(v);display.textContent=v;done()}catch(e){alert(e.message||'Save failed')}
-    finally{saveBtn.disabled=false;saveBtn.textContent='Save'}
+    try{await onSave(v);if(display.isConnected)display.textContent=v;done()}catch(e){alert(e.message||'Save failed')}
+    finally{if(saveBtn.isConnected){saveBtn.disabled=false;saveBtn.textContent='Save'}}
   })
   input.focus()
   if(!multiLine)input.select()
