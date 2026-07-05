@@ -379,8 +379,8 @@ function inlineEdit({btnId, displayId, currentValue, onSave, multiLine=false, ty
     if(wrapper.parentElement)wrapper.replaceWith(display)
     if(btn&&editIcon&&editIcon.isConnected)editIcon.style.display=''
   }
-  cancelBtn.addEventListener('click',done)
-  saveBtn.addEventListener('click',async()=>{
+  cancelBtn.addEventListener('click',(e)=>{e.stopPropagation();done()})
+  saveBtn.addEventListener('click',async(e)=>{e.stopPropagation();
     const v=input.value.trim()
     if(!v){input.focus();return}
     saveBtn.disabled=true;saveBtn.textContent='Saving...'
