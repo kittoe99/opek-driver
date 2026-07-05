@@ -147,7 +147,7 @@ async function loadDriverData(){
     const{data:areas}=await supabase.from('driver_service_areas').select('state').eq('driver_id',driver.id).order('state')
     serviceAreas=(areas||[]).map(a=>a.state)
     if(driver.provider_signup_id){
-      const{data:signup}=await supabase.from('provider_signups').select('*').eq('id',driver.provider_signup_id).maybeSingle()
+      const{data:signup}=await supabase.rpc('get_my_provider_signup').maybeSingle()
       if(signup){
         const pi=signup.provider_info||{}
         const v=pi.vehicle||{}
