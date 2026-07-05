@@ -307,11 +307,11 @@ function renderSettingsContent(){
     </div>`:''}
 
     ${providerInfo?`<div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
-      <div class="px-4 pt-4 pb-1">
+      <div class="px-4 py-3 flex items-center justify-between cursor-pointer active:bg-gray-50 transition" id="toggle-provider-info">
         <p class="text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Application Details</p>
+        <svg class="w-4 h-4 text-gray-300 transition-transform duration-200" id="provider-chevron" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
       </div>
-      <div class="divide-y divide-gray-50">${providerInfo}</div>
-    </div>`:''}
+      <div id="provider-info-body" class="divide-y divide-gray-50 hidden">${providerInfo}</div></div>`:''}
 
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
       <div class="px-4 py-3 flex items-center gap-3 text-sm text-gray-500">
@@ -414,6 +414,8 @@ function bindEvents(active,showApp=true){
     document.querySelectorAll('.accept-offer-btn').forEach(btn=>btn.addEventListener('click',async(e)=>{e.stopPropagation();const id=btn.dataset.assignmentId;btn.disabled=true;const{error}=await supabase.rpc('accept_job_assignment',{p_assignment_id:id});if(error){alert(error.message);btn.disabled=false;return};await loadDriverData()}))
   }
   if(active==='settings'){
+    document.getElementById('toggle-provider-info')?.addEventListener('click',()=>{const body=document.getElementById('provider-info-body');const ch=document.getElementById('provider-chevron');if(!body||!ch)return;body.classList.toggle('hidden');ch.classList.toggle('rotate-180')})
+    document.getElementById('edit-name-btn')
     document.getElementById('edit-name-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-name-btn',displayId:'display-name',currentValue:driver?.full_name||'',onSave:async(v)=>{const{error}=await supabase.from('drivers').update({full_name:v}).eq('id',driver.id);if(error)throw error;driver={...driver,full_name:v};render()}})})
     document.getElementById('edit-phone-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-phone-btn',displayId:'display-phone',currentValue:driver?.phone||'',onSave:async(v)=>{const{error}=await supabase.from('drivers').update({phone:v}).eq('id',driver.id);if(error)throw error;driver={...driver,phone:v};render()}})})
     document.getElementById('edit-vehicle-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-vehicle-btn',displayId:'display-vehicle',currentValue:driver?.vehicle_type||'',onSave:async(v)=>{const{error}=await supabase.from('drivers').update({vehicle_type:v}).eq('id',driver.id);if(error)throw error;driver={...driver,vehicle_type:v};render()}})})
