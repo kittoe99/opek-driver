@@ -6,7 +6,10 @@
   --color-brand-100: #d2d9e6;
   --color-brand-200: #a4b2cc;
   --color-brand-700: #1c2b42;
-  --color-secondary: #ff006e;
+  --color-secondary: #355070;
+  --color-accent: #ff006e;
+  --color-accent-50: #fff0f6;
+  --color-accent-100: #ffd6e6;
 }
 
 @keyframes slide-up {
@@ -94,7 +97,7 @@
 }
 
 @keyframes pulse-ring {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 110, 0.5), 0 0 0 0 rgba(255, 0, 110, 0.3); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 110, 0.4), 0 0 0 0 rgba(255, 0, 110, 0.2); }
   50% { box-shadow: 0 0 0 6px rgba(255, 0, 110, 0), 0 0 0 10px rgba(255, 0, 110, 0); }
 }
 
@@ -123,7 +126,7 @@
 .pl-bar {
   width: 0.625rem;
   height: 1.5rem;
-  background: #ff006e;
+  background: #355070;
   border-radius: 1px;
   transform: skewX(8deg);
   transform-origin: bottom;
