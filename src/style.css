@@ -6,7 +6,7 @@
   --color-brand-100: #d2d9e6;
   --color-brand-200: #a4b2cc;
   --color-brand-700: #1c2b42;
-  --color-secondary: #355070;
+  --color-secondary: #ff006e;
 }
 
 @keyframes slide-up {
@@ -94,8 +94,8 @@
 }
 
 @keyframes pulse-ring {
-  0%, 100% { box-shadow: 0 0 0 0 rgba(220, 38, 38, 0.5), 0 0 0 0 rgba(220, 38, 38, 0.3); }
-  50% { box-shadow: 0 0 0 6px rgba(220, 38, 38, 0), 0 0 0 10px rgba(220, 38, 38, 0); }
+  0%, 100% { box-shadow: 0 0 0 0 rgba(255, 0, 110, 0.5), 0 0 0 0 rgba(255, 0, 110, 0.3); }
+  50% { box-shadow: 0 0 0 6px rgba(255, 0, 110, 0), 0 0 0 10px rgba(255, 0, 110, 0); }
 }
 
 .animate-pulse-ring {
@@ -123,7 +123,7 @@
 .pl-bar {
   width: 0.625rem;
   height: 1.5rem;
-  background: #355070;
+  background: #ff006e;
   border-radius: 1px;
   transform: skewX(8deg);
   transform-origin: bottom;
