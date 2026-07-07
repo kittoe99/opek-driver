@@ -29,11 +29,11 @@ const statusConfig = {
 }
 
 const serviceTypeConfig = {
-  'Junk Removal': 'bg-gray-100 text-gray-600',
-  'Moving Labor': 'bg-gray-100 text-gray-600',
-  'Moving': 'bg-gray-100 text-gray-600',
-  'Demolition': 'bg-gray-100 text-gray-600',
-  'Cleaning': 'bg-gray-100 text-gray-600',
+  'Junk Removal': 'bg-accent/10 text-accent',
+  'Moving Labor': 'bg-accent/10 text-accent',
+  'Moving': 'bg-accent/10 text-accent',
+  'Demolition': 'bg-accent/10 text-accent',
+  'Cleaning': 'bg-accent/10 text-accent',
 }
 
 const iconsSvg = {
@@ -297,7 +297,7 @@ function renderJobsContent(){
   const o=getOffers();const active=getActiveJobs();const completed=getCompletedJobs()
   const activeBookings=active.map(a=>bookingsById[a.booking_id]).filter(Boolean)
   const completedBookings=completed.map(a=>bookingsById[a.booking_id]).filter(Boolean)
-  const filterBar=`<div class="flex bg-white rounded-xl p-1 mb-3 border border-gray-100 shadow-sm"><button id="filter-active" class="flex-1 py-2 rounded-lg text-sm font-semibold transition ${jobsFilter==='active'?'bg-gray-200 text-gray-900 shadow-sm':'text-gray-500'}" data-filter="active">Active${o.length?`<span class="ml-1.5 text-[10px] bg-accent text-white px-1.5 py-0.5 rounded-full">${o.length+active.length}</span>`:''}</button><button id="filter-completed" class="flex-1 py-2 rounded-lg text-sm font-semibold transition ${jobsFilter==='completed'?'bg-gray-200 text-gray-900 shadow-sm':'text-gray-500'}" data-filter="completed">Completed${completed.length?`<span class="ml-1.5 text-[10px] bg-gray-300 text-gray-600 px-1.5 py-0.5 rounded-full">${completed.length}</span>`:''}</button></div>`
+  const filterBar=`<div class="flex bg-white rounded-xl p-1 mb-3 border border-gray-100 shadow-sm"><button id="filter-active" class="flex-1 py-2 rounded-lg text-sm font-semibold transition ${jobsFilter==='active'?'bg-accent/10 text-accent shadow-sm':'text-gray-500'}" data-filter="active">Active${o.length?`<span class="ml-1.5 text-[10px] bg-accent text-white px-1.5 py-0.5 rounded-full">${o.length+active.length}</span>`:''}</button><button id="filter-completed" class="flex-1 py-2 rounded-lg text-sm font-semibold transition ${jobsFilter==='completed'?'bg-accent/10 text-accent shadow-sm':'text-gray-500'}" data-filter="completed">Completed${completed.length?`<span class="ml-1.5 text-[10px] bg-accent/20 text-accent px-1.5 py-0.5 rounded-full">${completed.length}</span>`:''}</button></div>`
   if(jobsFilter==='completed'){
     if(!completed.length)return filterBar+renderEmptyState('Completed','Completed jobs will appear here')
     return filterBar+`<div class="space-y-2"><span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">${completed.length} completed job${completed.length!==1?'s':''}</span>${completed.map(a=>{const b=getBookingForAssignment(a);return b?jobCard(b,a):''}).join('')}</div>`
