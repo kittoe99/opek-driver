@@ -91,26 +91,44 @@ async function loadBalanceData() {
 
 async function startStripeOnboarding() {
   const { data: { session: s } } = await supabase.auth.getSession()
-  if (!s) return
+  if (!s) { alert('Please log in again.'); return }
   const container = document.getElementById('connect-onboarding-container')
   if (!container) return
-  if (!window.StripeConnect) { container.innerHTML = '<p class="text-sm text-red-500">Stripe Connect script not loaded. Please refresh.</p>'; return }
 
-  container.innerHTML = ''
+  container.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-pulse text-sm text-gray-400">Loading onboarding...</div></div>'
   container.style.minHeight = '500px'
 
-  const stripeConnect = window.StripeConnect.init({
-    publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
-    fetchClientSecret: () => fetch(`${supabaseUrl}/functions/v1/stripe-connect-onboarding`, {
+  if (!window.StripeConnect) {
+    container.innerHTML = '<p class="text-sm text-red-500 p-4">Stripe Connect failed to load. Check your network or disable ad blockers, then refresh.</p>'
+    return
+  }
+
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/stripe-connect-onboarding`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${s.access_token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({}),
-    }).then(r => r.json()).then(d => d.client_secret),
-    appearance: { variables: { colorPrimary: '#355070', borderRadius: '12px' } },
-  })
+    })
+    const body = await res.json()
+    if (body.error) { container.innerHTML = `<p class="text-sm text-red-500 p-4">${body.error}</p>`; return }
+    if (!body.client_secret) { container.innerHTML = '<p class="text-sm text-red-500 p-4">Failed to create onboarding session.</p>'; return }
 
-  const accOnboarding = stripeConnect.create('account-onboarding')
-  container.appendChild(accOnboarding)
+    container.innerHTML = ''
+    const stripeConnect = window.StripeConnect.init({
+      publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
+      fetchClientSecret: () => fetch(`${supabaseUrl}/functions/v1/stripe-connect-onboarding`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${s.access_token}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+      }).then(r => r.json()).then(d => d.client_secret),
+      appearance: { variables: { colorPrimary: '#355070', borderRadius: '12px' } },
+    })
+    const accOnboarding = stripeConnect.create('account-onboarding')
+    container.appendChild(accOnboarding)
+  } catch (err) {
+    container.innerHTML = '<p class="text-sm text-red-500 p-4">Something went wrong. Please try again.</p>'
+    console.error('Onboarding error:', err)
+  }
 }
 
 let connectPayoutsInstance = null
