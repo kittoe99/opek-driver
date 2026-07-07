@@ -135,19 +135,6 @@ async function renderConnectPayouts(containerEl) {
   containerEl.appendChild(payouts)
 }
 
-async function openStripeDashboard() {
-  const { data: { session: s } } = await supabase.auth.getSession()
-  if (!s) return
-  try {
-    const res = await fetch(`${supabaseUrl}/functions/v1/stripe-connect-dashboard`, {
-      method: 'POST', headers: { Authorization: `Bearer ${s.access_token}` },
-    })
-    const body = await res.json()
-    if (body.error) { alert(body.error); return }
-    if (body.url) window.open(body.url, '_blank')
-  } catch (err) { alert(err.message) }
-}
-
 async function requestCashout() {
   if (cashoutLoading) return
   if (!balanceData || !balanceData.available_balance_cents || balanceData.available_balance_cents < 100) {
