@@ -43,6 +43,10 @@ body {
   filter: drop-shadow(0 3px 4px rgba(0,0,0,0.35));
 }
 
+.leaflet-control-zoom {
+  margin-top: 48px !important;
+}
+
 .leaflet-tile {
   filter: hue-rotate(210deg) saturate(0.4) brightness(0.95) !important;
 }
