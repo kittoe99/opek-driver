@@ -61,6 +61,8 @@ let assignments = []
 let bookingsById = {}
 let loading = true
 let loadingGuard = false
+let balanceData = null
+let cashoutLoading = false
 let authView = 'login'
 let selectedBooking = null
 let selectedAssignment = null
@@ -80,6 +82,103 @@ const assignmentStatusConfig = {
 }
 
 function parseStatesInput(v) { return v.split(/[,;\s]+/).map(s=>s.trim().toUpperCase()).filter(s=>s.length===2) }
+
+async function loadBalanceData() {
+  if (!driver || driver.status !== 'approved') { balanceData = null; return }
+  const { data, error } = await supabase.rpc('get_driver_balance')
+  if (!error && data) balanceData = data
+}
+
+async function startStripeOnboarding() {
+  const { data: { session: s } } = await supabase.auth.getSession()
+  if (!s) return
+  const container = document.getElementById('connect-onboarding-container')
+  if (!container) return
+  container.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-pulse text-sm text-gray-400">Loading onboarding...</div></div>'
+  try {
+    const url = `${supabaseUrl}/functions/v1/stripe-connect-onboarding?mode=embedded`
+    const res = await fetch(url, {
+      method: 'POST', headers: { Authorization: `Bearer ${s.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    const body = await res.json()
+    if (body.error) { alert(body.error); return }
+    if (body.client_secret) {
+      container.innerHTML = ''
+      const instance = window.StripeConnect.init({
+        publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
+        fetchClientSecret: () => Promise.resolve(body.client_secret),
+        appearance: { variables: { colorPrimary: '#355070', borderRadius: '12px' } },
+      })
+      const onboarding = instance.create('account-onboarding')
+      container.appendChild(onboarding)
+      container.appendChild(onboarding)
+    }
+  } catch (err) { container.innerHTML = '<p class="text-sm text-red-500">Failed to load onboarding. Please try again.</p>' }
+}
+
+let connectPayoutsInstance = null
+
+async function renderConnectPayouts(containerEl) {
+  if (!containerEl) return
+  const { data: { session: s } } = await supabase.auth.getSession()
+  if (!s) return
+  containerEl.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-pulse text-sm text-gray-400">Loading account...</div></div>'
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/stripe-connect-account-session?component=payouts`, {
+      method: 'POST', headers: { Authorization: `Bearer ${s.access_token}` },
+    })
+    const body = await res.json()
+    if (body.error) { containerEl.innerHTML = `<p class="text-sm text-red-500">${body.error}</p>`; return }
+    if (body.client_secret) {
+      containerEl.innerHTML = ''
+      connectPayoutsInstance = window.StripeConnect.init({
+        publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
+        fetchClientSecret: () => Promise.resolve(body.client_secret),
+        appearance: { variables: { colorPrimary: '#355070', borderRadius: '12px' } },
+      })
+      const payouts = connectPayoutsInstance.create('payouts')
+      containerEl.appendChild(payouts)
+    }
+  } catch (err) { containerEl.innerHTML = '<p class="text-sm text-red-500">Failed to load. Please try again.</p>' }
+}
+
+async function openStripeDashboard() {
+  const { data: { session: s } } = await supabase.auth.getSession()
+  if (!s) return
+  try {
+    const res = await fetch(`${supabaseUrl}/functions/v1/stripe-connect-dashboard`, {
+      method: 'POST', headers: { Authorization: `Bearer ${s.access_token}` },
+    })
+    const body = await res.json()
+    if (body.error) { alert(body.error); return }
+    if (body.url) window.open(body.url, '_blank')
+  } catch (err) { alert(err.message) }
+}
+
+async function requestCashout() {
+  if (cashoutLoading) return
+  if (!balanceData || !balanceData.available_balance_cents || balanceData.available_balance_cents < 100) {
+    alert('No available balance to cash out. Minimum cashout is $1.00.'); return
+  }
+  const amount = (balanceData.available_balance_cents / 100).toFixed(2)
+  if (!confirm(`Cash out $${amount} to your connected bank account?`)) return
+  cashoutLoading = true
+  try {
+    const { data: { session: s } } = await supabase.auth.getSession()
+    if (!s) { alert('Please log in again'); return }
+    const res = await fetch(`${supabaseUrl}/functions/v1/stripe-connect-payout`, {
+      method: 'POST', headers: { Authorization: `Bearer ${s.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({}),
+    })
+    const body = await res.json()
+    if (body.error) { alert(body.error); cashoutLoading = false; return }
+    alert(`Cashout of $${(body.amount_cents / 100).toFixed(2)} initiated successfully! Funds will arrive in 1-2 business days.`)
+    await loadBalanceData()
+    render()
+  } catch (err) { alert(err.message) }
+  finally { cashoutLoading = false }
+}
 function getOffers() { return assignments.filter(a=>a.status==='offered') }
 function getTodayEarnings() {
   const today = new Date().toISOString().slice(0, 10)
@@ -173,7 +272,7 @@ async function loadDriverData(){
   if(jobError)console.error('get_my_jobs error:',jobError)
   if(jobRows?.length){assignments=jobRows.map(r=>({id:r.assignment_id,booking_id:r.booking_id,driver_id:r.driver_id,status:r.status,assigned_at:r.assigned_at,responded_at:r.responded_at,completed_at:r.completed_at,note:r.note}));const seen={};for(const r of jobRows){if(!seen[r.booking_id])seen[r.booking_id]={id:r.booking_id,order_number:r.order_number,customer_info:r.customer_info,location_info:r.location_info,booking_details:r.booking_details,status:r.status};else if(r.status==='in_progress')seen[r.booking_id].status=r.status};bookingsById=seen}
   else{assignments=[];bookingsById={}}
-  }finally{loading=false;loadingGuard=false;window.__app={assignments,bookingsById,driver,serviceAreas,providerSignup};console.log('loaded',assignments.length,'assignments,',Object.keys(bookingsById).length,'bookings, driver_id:',driver?.id,'session_uid:',session?.user?.id);render()}
+  }finally{loading=false;loadingGuard=false;window.__app={assignments,bookingsById,driver,serviceAreas,providerSignup};console.log('loaded',assignments.length,'assignments,',Object.keys(bookingsById).length,'bookings, driver_id:',driver?.id,'session_uid:',session?.user?.id);await loadBalanceData();render()}
 }
 
 function renderLoginPage(){
@@ -239,7 +338,14 @@ function renderEarningsContent(){
   const weekEarnings=getEarningsForPeriod(7)
   const monthEarnings=getEarningsForPeriod(30)
   const total=completed.reduce((s,a)=>{const b=bookingsById[a.booking_id];return s+(b?.booking_details?.price||0)},0)
-  return`<div class="space-y-4"><div class="grid grid-cols-3 gap-3"><div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-center"><p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Today</p><p class="text-lg font-bold text-brand-700 mt-1">$${todayEarnings}</p></div><div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-center"><p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Week</p><p class="text-lg font-bold text-brand-700 mt-1">$${weekEarnings}</p></div><div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-center"><p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Month</p><p class="text-lg font-bold text-brand-700 mt-1">$${monthEarnings}</p></div></div><div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between"><span class="text-sm font-semibold text-gray-800">Total earned</span><span class="text-xl font-bold text-brand-700">$${total}</span></div>${completed.length?`<div class="mt-2"><span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">${completed.length} completed job${completed.length!==1?'s':''}</span><div class="mt-3 space-y-2">${completed.slice(0,15).map(a=>{const b=bookingsById[a.booking_id];if(!b)return'';const date=b.booking_details?.preferred_date;return`<div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center gap-3"><div class="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center shrink-0"><span class="text-sm font-bold text-brand-700">$${b.booking_details?.price||0}</span></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold text-gray-800 truncate">${b.customer_info?.name||'Unknown'}</p><p class="text-xs text-gray-400">${b.booking_details?.service_type||'Service'}${date?' &middot; '+formatDate(date):''}</p></div><span class="text-xs font-medium text-brand">+$${b.booking_details?.price||0}</span></div>`}).join('')}</div></div>`:`<div class="text-center text-gray-400 py-8"><p class="text-sm">No completed jobs yet</p></div>`}</div>`
+  const sa=balanceData?.stripe_account
+  const pending=balanceData?.pending_balance_cents||0
+  const available=balanceData?.available_balance_cents||0
+  const paidOut=balanceData?.total_paid_out_cents||0
+  const isOnboarded=sa?.stripe_account_id
+  const canPayout=sa?.payouts_enabled
+  const needsOnboarding=isOnboarded&&!sa?.details_submitted
+  return`<div class="space-y-4">${isOnboarded&&canPayout?`<div class="bg-white rounded-2xl shadow-sm border border-brand/10 p-4"><div class="flex items-center justify-between mb-3"><span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">Available Balance</span><span class="text-xs text-brand font-medium">Ready to cash out</span></div><p class="text-3xl font-bold text-gray-900">$${(available/100).toFixed(2)}</p>${available>0?`<button id="cashout-btn" class="w-full mt-3 bg-brand text-white font-semibold py-3 rounded-xl hover:bg-secondary active:scale-[0.98] transition text-sm ${cashoutLoading?'opacity-50':''}" ${cashoutLoading?'disabled':''}>${cashoutLoading?'Processing...':'Cash Out'}</button>`:`<p class="text-xs text-gray-400 mt-2">No balance to cash out yet</p>`}<p class="text-xs text-gray-400 mt-2">Total paid out: $${(paidOut/100).toFixed(2)}</p></div>`:''}${!isOnboarded?`<div class="bg-brand-50 rounded-2xl border border-brand-200 p-4"><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-full bg-brand-100 flex items-center justify-center"><svg class="w-5 h-5 text-brand" viewBox="0 0 24 24"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg></div><div><p class="text-sm font-semibold text-brand-700">Connect to get paid</p><p class="text-xs text-gray-500">Set up your bank info to receive payouts</p></div></div><button id="onboarding-btn" class="w-full bg-brand text-white font-semibold py-3 rounded-xl hover:bg-brand-700 active:scale-[0.98] transition text-sm">Set Up Payouts</button><div id="connect-onboarding-container"></div></div>`:''}${isOnboarded&&needsOnboarding?`<div class="bg-accent-50 rounded-2xl border border-accent-100 p-4"><div class="flex items-center gap-3 mb-3"><div class="w-10 h-10 rounded-full bg-accent-100 flex items-center justify-center"><svg class="w-5 h-5 text-accent" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" stroke-width="2"/><line x1="12" y1="8" x2="12" y2="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><line x1="12" y1="16" x2="12.01" y2="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></div><div><p class="text-sm font-semibold text-brand-700">Finish account setup</p><p class="text-xs text-gray-500">Your Stripe account needs additional info</p></div></div><button id="onboarding-btn" class="w-full bg-accent text-white font-semibold py-3 rounded-xl hover:bg-accent/90 active:scale-[0.98] transition text-sm">Complete Setup</button><div id="connect-onboarding-container"></div></div>`:''}<div class="grid grid-cols-3 gap-3"><div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-center"><p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Today</p><p class="text-lg font-bold text-brand-700 mt-1">$${todayEarnings}</p></div><div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-center"><p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Week</p><p class="text-lg font-bold text-brand-700 mt-1">$${weekEarnings}</p></div><div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 text-center"><p class="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Month</p><p class="text-lg font-bold text-brand-700 mt-1">$${monthEarnings}</p></div></div><div class="bg-white rounded-xl p-4 shadow-sm border border-gray-100 flex items-center justify-between"><span class="text-sm font-semibold text-gray-800">Total earned</span><span class="text-xl font-bold text-brand-700">$${total}</span></div>${completed.length?`<div class="mt-2"><span class="text-xs font-semibold text-gray-400 uppercase tracking-wider">${completed.length} completed job${completed.length!==1?'s':''}</span><div class="mt-3 space-y-2">${completed.slice(0,15).map(a=>{const b=bookingsById[a.booking_id];if(!b)return'';const date=b.booking_details?.preferred_date;return`<div class="bg-white rounded-xl p-3 shadow-sm border border-gray-100 flex items-center gap-3"><div class="w-10 h-10 rounded-lg bg-brand-50 flex items-center justify-center shrink-0"><span class="text-sm font-bold text-brand-700">$${b.booking_details?.price||0}</span></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold text-gray-800 truncate">${b.customer_info?.name||'Unknown'}</p><p class="text-xs text-gray-400">${b.booking_details?.service_type||'Service'}${date?' &middot; '+formatDate(date):''}</p></div><span class="text-xs font-medium text-brand">+$${b.booking_details?.price||0}</span></div>`}).join('')}</div></div>`:`<div class="text-center text-gray-400 py-8"><p class="text-sm">No completed jobs yet</p></div>`}</div>`
 }
 
 function renderScheduleContent(){
@@ -428,6 +534,13 @@ function bindEvents(active,showApp=true){
       document.getElementById('edit-additional-info-btn')?.addEventListener('click',()=>{inlineEdit({btnId:'edit-additional-info-btn',displayId:'display-additional-info',currentValue:providerSignup._n?.additionalInfo||'',multiLine:true,onSave:async(v)=>{const pi={...providerSignup.provider_info};pi.additional_info=v;await saveProviderInfo(pi)}})})
     }
     const b=document.getElementById('logout-btn');if(b)b.addEventListener('click',async()=>{await supabase.auth.signOut();session=null;window.location.hash='';renderLoginPage()})
+  }
+  document.getElementById('cashout-btn')?.addEventListener('click',(e)=>{e.stopPropagation();requestCashout()})
+  document.getElementById('onboarding-btn')?.addEventListener('click',(e)=>{e.stopPropagation();startStripeOnboarding()})
+  // Render embedded payouts if fully onboarded
+  const payoutsContainer = document.getElementById('connect-payouts-container')
+  if (payoutsContainer && balanceData?.stripe_account?.payouts_enabled) {
+    setTimeout(() => renderConnectPayouts(payoutsContainer), 200)
   }
 }
 
