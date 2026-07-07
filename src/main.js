@@ -95,23 +95,25 @@ async function startStripeOnboarding() {
   const container = document.getElementById('connect-onboarding-container')
   if (!container) return
   container.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-pulse text-sm text-gray-400">Loading onboarding...</div></div>'
+  container.style.minHeight = '400px'
   try {
-    const url = `${supabaseUrl}/functions/v1/stripe-connect-onboarding?mode=embedded`
-    const res = await fetch(url, {
-      method: 'POST', headers: { Authorization: `Bearer ${s.access_token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+    const { data: body } = await supabase.functions.invoke('stripe-connect-onboarding', {
+      method: 'POST', body: { mode: 'embedded' },
     })
-    const body = await res.json()
-    if (body.error) { alert(body.error); return }
+    if (body.error) { container.innerHTML = `<p class="text-sm text-red-500">${body.error}</p>`; return }
     if (body.client_secret) {
       container.innerHTML = ''
       const instance = window.StripeConnect.init({
         publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
-        fetchClientSecret: () => Promise.resolve(body.client_secret),
+        fetchClientSecret: async () => {
+          const { data } = await supabase.functions.invoke('stripe-connect-onboarding', {
+            method: 'POST', body: { mode: 'embedded' },
+          })
+          return data.client_secret
+        },
         appearance: { variables: { colorPrimary: '#355070', borderRadius: '12px' } },
       })
       const onboarding = instance.create('account-onboarding')
-      container.appendChild(onboarding)
       container.appendChild(onboarding)
     }
   } catch (err) { container.innerHTML = '<p class="text-sm text-red-500">Failed to load onboarding. Please try again.</p>' }
@@ -121,20 +123,23 @@ let connectPayoutsInstance = null
 
 async function renderConnectPayouts(containerEl) {
   if (!containerEl) return
-  const { data: { session: s } } = await supabase.auth.getSession()
-  if (!s) return
   containerEl.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-pulse text-sm text-gray-400">Loading account...</div></div>'
+  containerEl.style.minHeight = '300px'
   try {
-    const res = await fetch(`${supabaseUrl}/functions/v1/stripe-connect-account-session?component=payouts`, {
-      method: 'POST', headers: { Authorization: `Bearer ${s.access_token}` },
+    const { data: body } = await supabase.functions.invoke('stripe-connect-account-session', {
+      method: 'POST', body: { component: 'payouts' },
     })
-    const body = await res.json()
     if (body.error) { containerEl.innerHTML = `<p class="text-sm text-red-500">${body.error}</p>`; return }
     if (body.client_secret) {
       containerEl.innerHTML = ''
       connectPayoutsInstance = window.StripeConnect.init({
         publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
-        fetchClientSecret: () => Promise.resolve(body.client_secret),
+        fetchClientSecret: async () => {
+          const { data } = await supabase.functions.invoke('stripe-connect-account-session', {
+            method: 'POST', body: { component: 'payouts' },
+          })
+          return data.client_secret
+        },
         appearance: { variables: { colorPrimary: '#355070', borderRadius: '12px' } },
       })
       const payouts = connectPayoutsInstance.create('payouts')
