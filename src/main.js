@@ -95,48 +95,31 @@ async function startStripeOnboarding() {
   const container = document.getElementById('connect-onboarding-container')
   if (!container) return
 
-  container.innerHTML = '<div class="flex items-center justify-center py-8"><div class="animate-pulse text-sm text-gray-400">Loading onboarding...</div></div>'
-  container.style.minHeight = '500px'
-
-  if (!window.StripeConnect) {
-    container.innerHTML = '<p class="text-sm text-red-500 p-4">Stripe Connect failed to load. Check your network or disable ad blockers, then refresh.</p>'
-    return
-  }
+  container.innerHTML = '<div class="flex items-center justify-center py-4"><div class="animate-pulse text-sm text-gray-400">Setting up your account...</div></div>'
 
   try {
     const res = await fetch(`${supabaseUrl}/functions/v1/stripe-connect-onboarding`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${s.access_token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({}),
+      body: JSON.stringify({ return_url: window.location.href }),
     })
     const body = await res.json()
     if (body.error) { container.innerHTML = `<p class="text-sm text-red-500 p-4">${body.error}</p>`; return }
-    if (!body.client_secret) { container.innerHTML = '<p class="text-sm text-red-500 p-4">Failed to create onboarding session.</p>'; return }
-
-    container.innerHTML = ''
-    const stripeConnect = window.StripeConnect.init({
-      publishableKey: import.meta.env.VITE_STRIPE_PUBLISHABLE_KEY || '',
-      fetchClientSecret: () => fetch(`${supabaseUrl}/functions/v1/stripe-connect-onboarding`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${s.access_token}`, 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
-      }).then(r => r.json()).then(d => d.client_secret),
-      appearance: { variables: { colorPrimary: '#355070', borderRadius: '12px' } },
-    })
-    const accOnboarding = stripeConnect.create('account-onboarding')
-    container.appendChild(accOnboarding)
+    if (body.url) {
+      container.innerHTML = '<div class=\"text-center py-4\"><p class=\"text-sm text-brand font-medium\">Opening onboarding...</p><p class=\"text-xs text-gray-400 mt-1\">You will be redirected to Stripe to complete your account setup, then brought back here.</p></div>'
+      setTimeout(() => { window.location.href = body.url }, 500)
+    }
   } catch (err) {
     container.innerHTML = '<p class="text-sm text-red-500 p-4">Something went wrong. Please try again.</p>'
-    console.error('Onboarding error:', err)
   }
 }
 
 let connectPayoutsInstance = null
 
 async function renderConnectPayouts(containerEl) {
-  if (!containerEl) return
+  if (!containerEl || !window.StripeConnect) return
   const { data: { session: s } } = await supabase.auth.getSession()
-  if (!s || !window.StripeConnect) return
+  if (!s) return
   containerEl.style.minHeight = '300px'
 
   connectPayoutsInstance = window.StripeConnect.init({
@@ -534,11 +517,7 @@ function bindEvents(active,showApp=true){
   }
   document.getElementById('cashout-btn')?.addEventListener('click',(e)=>{e.stopPropagation();requestCashout()})
   document.getElementById('onboarding-btn')?.addEventListener('click',(e)=>{e.stopPropagation();startStripeOnboarding()})
-  // Render embedded payouts if fully onboarded
-  const payoutsContainer = document.getElementById('connect-payouts-container')
-  if (payoutsContainer && balanceData?.stripe_account?.payouts_enabled) {
-    setTimeout(() => renderConnectPayouts(payoutsContainer), 200)
-  }
+
 }
 
 function showConfirm(message,confirmText='Confirm',cancelText='Cancel',danger=false){return new Promise(resolve=>{const main=document.querySelector('main');if(!main){resolve(false);return};const overlay=document.createElement('div');overlay.className='absolute inset-0 z-[4000] flex items-center justify-center bg-black/40 animate-fade-in';const icon=danger?'<circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>':'<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>';overlay.innerHTML=`<div class="bg-white rounded-2xl shadow-2xl mx-6 w-full max-w-xs overflow-hidden animate-scale-in"><div class="p-6 text-center"><div class="w-12 h-12 ${danger?'bg-red-100':'bg-brand-100'} rounded-full flex items-center justify-center mx-auto mb-4"><svg class="w-6 h-6 ${danger?'text-red-600':'text-brand'}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">${icon}</svg></div><p class="text-sm text-gray-700 font-medium leading-relaxed">${message}</p></div><div class="flex border-t border-gray-100"><button class="cancel-btn flex-1 py-3.5 text-sm font-semibold text-gray-500 hover:bg-gray-50 active:bg-gray-100 transition">${cancelText}</button><button class="confirm-btn flex-1 py-3.5 text-sm font-semibold border-l border-gray-100 ${danger?'text-red-600 hover:bg-red-50 active:bg-red-100':'text-brand hover:bg-brand-50 active:bg-brand-100'} transition">${confirmText}</button></div></div>`;main.appendChild(overlay);overlay.querySelector('.cancel-btn').addEventListener('click',()=>{overlay.remove();resolve(false)});overlay.querySelector('.confirm-btn').addEventListener('click',()=>{overlay.remove();resolve(true)});overlay.addEventListener('click',e=>{if(e.target===overlay){overlay.remove();resolve(false)}})})}
