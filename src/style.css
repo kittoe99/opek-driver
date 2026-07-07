@@ -44,7 +44,9 @@ body {
 }
 
 .leaflet-control-zoom {
-  margin-top: 48px !important;
+  margin-top: 0 !important;
+  margin-bottom: 80px !important;
+  margin-right: 4px !important;
 }
 
 .leaflet-tile {
