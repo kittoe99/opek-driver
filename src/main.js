@@ -101,7 +101,7 @@ async function startStripeOnboarding() {
     const res = await fetch(`${supabaseUrl}/functions/v1/stripe-connect-onboarding`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${s.access_token}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ return_url: window.location.href }),
+      body: JSON.stringify({ return_url: window.location.origin }),
     })
     const body = await res.json()
     if (body.error) { container.innerHTML = `<p class="text-sm text-red-500 p-4">${body.error}</p>`; return }
