@@ -51,17 +51,17 @@ body {
 .shadow-xl { box-shadow: 0 20px 25px rgba(0,0,0,0.4) !important; }
 .shadow-2xl { box-shadow: 0 25px 50px rgba(0,0,0,0.4) !important; }
 
-.border { border-width: 1.5px !important; }
-.border-t { border-top-width: 1.5px !important; }
-.border-b { border-bottom-width: 1.5px !important; }
-.border-l { border-left-width: 1.5px !important; }
-.border-r { border-right-width: 1.5px !important; }
-.border-gray-50 { border-color: #666666 !important; }
-.border-gray-100 { border-color: #777777 !important; }
-.border-gray-200 { border-color: #888888 !important; }
-.border-gray-300 { border-color: #999999 !important; }
-.divide-y > :not([hidden]) ~ :not([hidden]) { border-top-width: 1.5px !important; }
-.divide-gray-50 > :not([hidden]) ~ :not([hidden]) { border-color: #666666 !important; }
+.border { border-width: 1px !important; }
+.border-t { border-top-width: 1px !important; }
+.border-b { border-bottom-width: 1px !important; }
+.border-l { border-left-width: 1px !important; }
+.border-r { border-right-width: 1px !important; }
+.border-gray-50 { border-color: #555555 !important; }
+.border-gray-100 { border-color: #666666 !important; }
+.border-gray-200 { border-color: #777777 !important; }
+.border-gray-300 { border-color: #888888 !important; }
+.divide-y > :not([hidden]) ~ :not([hidden]) { border-top-width: 1px !important; }
+.divide-gray-50 > :not([hidden]) ~ :not([hidden]) { border-color: #555555 !important; }
 
 @keyframes slide-up {
   from { transform: translateY(100%); }
