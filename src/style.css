@@ -2,10 +2,10 @@
 
 :root {
   color-scheme: dark;
-  --color-gray-50: #2e2e46;
-  --color-gray-100: #3e3e5e;
-  --color-gray-200: #505070;
-  --color-gray-300: #606080;
+  --color-gray-50: #1a1a1a;
+  --color-gray-100: #222222;
+  --color-gray-200: #2a2a2a;
+  --color-gray-300: #333333;
   --color-gray-400: #8a8aa8;
   --color-gray-500: #a8a8c4;
   --color-gray-600: #c8c8dc;
@@ -19,7 +19,7 @@ html {
 }
 
 body {
-  background: #1a1a24;
+  background: #000000;
 }
 
 @theme {
@@ -35,7 +35,7 @@ body {
 }
 
 .bg-white {
-  background-color: #242438 !important;
+  background-color: #111111 !important;
 }
 
 .w-4.h-4 { width: 1.25rem !important; height: 1.25rem !important; }
@@ -67,7 +67,7 @@ body {
   font-size: 10px !important;
   font-weight: 600 !important;
   color: #c0c0d0 !important;
-  text-shadow: 0 0 3px #1a1a24, 0 0 3px #1a1a24, 0 0 3px #1a1a24;
+  text-shadow: 0 0 3px #000000, 0 0 3px #000000, 0 0 3px #000000;
   padding: 0 !important;
   margin: 0 !important;
 }
@@ -92,8 +92,8 @@ body {
   border-radius: 14px !important;
   box-shadow: 0 4px 20px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2) !important;
   padding: 0 !important;
-  background: #242438 !important;
-  color: #e0e0ee !important;
+  background: #111111 !important;
+  color: #f2f2f8 !important;
 }
 
 .leaflet-popup-content {
@@ -103,7 +103,7 @@ body {
 
 .leaflet-popup-tip {
   box-shadow: none !important;
-  background: #242438 !important;
+  background: #111111 !important;
 }
 
 .leaflet-control-zoom {
@@ -119,12 +119,12 @@ body {
   line-height: 34px !important;
   font-size: 16px !important;
   color: #e0e0ec !important;
-  background: #2e2e46 !important;
-  border-bottom: 1px solid #505070 !important;
+  background: #1a1a1a !important;
+  border-bottom: 1px solid #2a2a2a !important;
 }
 
 .leaflet-control-zoom a:hover {
-  background: #3e3e5e !important;
+  background: #222222 !important;
 }
 
 .leaflet-control-zoom a:first-child {
@@ -138,7 +138,7 @@ body {
 
 .leaflet-control-attribution {
   font-size: 9px !important;
-  background: rgba(26, 26, 36, 0.9) !important;
+  background: rgba(0, 0, 0, 0.9) !important;
   padding: 2px 6px !important;
   border-radius: 6px !important;
   margin: 4px !important;
