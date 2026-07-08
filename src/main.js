@@ -358,7 +358,6 @@ function renderSettingsContent(){
         <p class="font-semibold text-gray-800 text-lg truncate">${driver?.full_name||'Unknown'}</p>
         <p class="text-xs ${statusColor} font-medium">${statusLabel} driver${signupStatusLabel}</p>
       </div>
-      <span class="text-[10px] bg-gray-50 border border-gray-200 text-gray-500 font-medium px-2 py-1 rounded-lg shrink-0">ID: ${(driver?.id||'').slice(0,8)}</span>
     </div>
 
     <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
