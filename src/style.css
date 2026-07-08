@@ -98,6 +98,14 @@ body {
   background: #000000 !important;
 }
 
+#booking-detail {
+  background: #1a1a1a !important;
+}
+
+#completion-form {
+  background: #1a1a1a !important;
+}
+
 .leaflet-popup-content-wrapper {
   border-radius: 14px !important;
   box-shadow: 0 4px 20px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2) !important;
