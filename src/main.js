@@ -29,11 +29,11 @@ const statusConfig = {
 }
 
 const serviceTypeConfig = {
-  'Junk Removal': 'bg-accent/10 text-accent',
-  'Moving Labor': 'bg-accent/10 text-accent',
-  'Moving': 'bg-accent/10 text-accent',
-  'Demolition': 'bg-accent/10 text-accent',
-  'Cleaning': 'bg-accent/10 text-accent',
+  'Junk Removal': 'bg-white/10 text-white/80',
+  'Moving Labor': 'bg-white/10 text-white/80',
+  'Moving': 'bg-white/10 text-white/80',
+  'Demolition': 'bg-white/10 text-white/80',
+  'Cleaning': 'bg-white/10 text-white/80',
 }
 
 const iconsSvg = {
@@ -288,7 +288,7 @@ function offerCard(assignment){
   const booking=getBookingForAssignment(assignment)
   if(!booking)return''
   const sc=assignmentStatusConfig.offered
-  const sb=serviceTypeConfig[booking.booking_details?.service_type]||'bg-accent/10 text-accent'
+  const sb=serviceTypeConfig[booking.booking_details?.service_type]||'bg-white/10 text-white/80'
   return`<div class="offer-card bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden mb-3 border-l-4 ${sc.border}" data-assignment-id="${assignment.id}"><div class="p-4"><div class="flex items-start justify-between mb-2"><div class="flex items-center gap-2"><span class="text-xs px-2 py-0.5 rounded-full font-medium ${sc.bg} ${sc.text}">New offer</span><span class="text-sm font-bold text-gray-800">${booking.location_info?.city||booking.order_number||''}</span></div></div><p class="font-semibold text-gray-800 mb-1">${booking.customer_info?.name||'Unknown'}</p><span class="inline-block text-xs px-1.5 py-0.5 rounded font-medium ${sb}">${booking.booking_details?.service_type||'Service'}</span><p class="text-xs text-gray-500 mt-2">${booking.location_info?.city||''},${booking.location_info?.state||''}</p><p class="text-xs text-gray-500">${formatDate(booking.booking_details?.preferred_date)} &middot; ${booking.booking_details?.preferred_time||''}</p>${assignment.note?`<p class="text-xs text-gray-400 mt-2 italic">"${assignment.note}"</p>`:''}<div class="flex gap-2 mt-4"><button class="accept-offer-btn flex-1 bg-accent text-white font-semibold py-2.5 rounded-xl text-sm active:scale-[0.98] transition" data-assignment-id="${assignment.id}">Accept</button><button class="decline-offer-btn flex-1 bg-gray-100 text-gray-700 font-semibold py-2.5 rounded-xl text-sm active:scale-[0.98] transition" data-assignment-id="${assignment.id}">Decline</button></div></div></div>`
 }
 
