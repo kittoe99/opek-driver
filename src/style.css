@@ -35,7 +35,7 @@ body {
 }
 
 .bg-white {
-  background-color: #474747 !important;
+  background-color: #8a8a8a !important;
 }
 
 .w-4.h-4 { width: 1.25rem !important; height: 1.25rem !important; }
@@ -95,7 +95,7 @@ body {
 }
 
 #map-container, .leaflet-container {
-  background: #474747 !important;
+  background: #8a8a8a !important;
 }
 
 #booking-detail {
