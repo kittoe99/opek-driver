@@ -91,7 +91,7 @@ body {
 }
 
 .leaflet-tile {
-  filter: brightness(1.15) contrast(1.1) !important;
+  filter: none !important;
 }
 
 #map-container, .leaflet-container {
