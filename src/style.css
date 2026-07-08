@@ -2,16 +2,16 @@
 
 :root {
   color-scheme: light;
-  --color-gray-50: #1a1a1a;
-  --color-gray-100: #333333;
-  --color-gray-200: #444444;
-  --color-gray-300: #555555;
-  --color-gray-400: #9a9ab8;
-  --color-gray-500: #bbbbd2;
-  --color-gray-600: #c8c8dc;
-  --color-gray-700: #e0e0ec;
-  --color-gray-800: #f2f2f8;
-  --color-gray-900: #ffffff;
+  --color-gray-50: #f9fafb;
+  --color-gray-100: #f3f4f6;
+  --color-gray-200: #e5e7eb;
+  --color-gray-300: #d1d5db;
+  --color-gray-400: #9ca3af;
+  --color-gray-500: #6b7280;
+  --color-gray-600: #4b5563;
+  --color-gray-700: #374151;
+  --color-gray-800: #1f2937;
+  --color-gray-900: #111827;
 }
 
 html {
@@ -35,7 +35,7 @@ body {
 }
 
 .bg-white {
-  background-color: #8a8a8a !important;
+  background-color: #d4d4d4 !important;
 }
 
 .w-4.h-4 { width: 1.25rem !important; height: 1.25rem !important; }
@@ -50,12 +50,6 @@ body {
 .shadow-lg { box-shadow: 0 10px 15px rgba(0,0,0,0.35) !important; }
 .shadow-xl { box-shadow: 0 20px 25px rgba(0,0,0,0.4) !important; }
 .shadow-2xl { box-shadow: 0 25px 50px rgba(0,0,0,0.4) !important; }
-
-.border-gray-50 { border-color: #777777 !important; }
-.border-gray-100 { border-color: #888888 !important; }
-.border-gray-200 { border-color: #999999 !important; }
-.border-gray-300 { border-color: #aaaaaa !important; }
-.divide-gray-50 > :not([hidden]) ~ :not([hidden]) { border-color: #777777 !important; }
 
 @keyframes slide-up {
   from { transform: translateY(100%); }
@@ -72,8 +66,8 @@ body {
   box-shadow: none !important;
   font-size: 10px !important;
   font-weight: 600 !important;
-  color: #dddde8 !important;
-  text-shadow: 0 0 3px #ffffff, 0 0 3px #ffffff, 0 0 3px #ffffff;
+  color: #374151 !important;
+  text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff;
   padding: 0 !important;
   margin: 0 !important;
 }
@@ -95,7 +89,7 @@ body {
 }
 
 #map-container, .leaflet-container {
-  background: #8a8a8a !important;
+  background: #d4d4d4 !important;
 }
 
 #booking-detail {
@@ -108,10 +102,10 @@ body {
 
 .leaflet-popup-content-wrapper {
   border-radius: 14px !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3), 0 1px 3px rgba(0,0,0,0.2) !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08) !important;
   padding: 0 !important;
-  background: #111111 !important;
-  color: #f2f2f8 !important;
+  background: #fff !important;
+  color: #1f2937 !important;
 }
 
 .leaflet-popup-content {
@@ -121,7 +115,7 @@ body {
 
 .leaflet-popup-tip {
   box-shadow: none !important;
-  background: #111111 !important;
+  background: #fff !important;
 }
 
 .leaflet-control-zoom {
@@ -136,13 +130,13 @@ body {
   height: 34px !important;
   line-height: 34px !important;
   font-size: 16px !important;
-  color: #eeeef5 !important;
-  background: #1a1a1a !important;
-  border-bottom: 1px solid #444444 !important;
+  color: #374151 !important;
+  background: #fff !important;
+  border-bottom: 1px solid #f3f4f6 !important;
 }
 
 .leaflet-control-zoom a:hover {
-  background: #333333 !important;
+  background: #f9fafb !important;
 }
 
 .leaflet-control-zoom a:first-child {
@@ -156,7 +150,7 @@ body {
 
 .leaflet-control-attribution {
   font-size: 9px !important;
-  background: rgba(0, 0, 0, 0.9) !important;
+  background: rgba(255,255,255,0.9) !important;
   padding: 2px 6px !important;
   border-radius: 6px !important;
   margin: 4px !important;
