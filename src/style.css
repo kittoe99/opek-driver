@@ -14,6 +14,10 @@
   --color-gray-900: #f0f0f8;
 }
 
+html {
+  font-size: 18px;
+}
+
 body {
   background: #1a1a24;
 }
@@ -33,6 +37,13 @@ body {
 .bg-white {
   background-color: #242438 !important;
 }
+
+.w-4.h-4 { width: 1.25rem !important; height: 1.25rem !important; }
+.w-5.h-5 { width: 1.5rem !important; height: 1.5rem !important; }
+.w-8.h-8 { width: 2.5rem !important; height: 2.5rem !important; }
+.w-10.h-10 { width: 3rem !important; height: 3rem !important; }
+.w-12.h-12 { width: 3.5rem !important; height: 3.5rem !important; }
+.w-14.h-14 { width: 4rem !important; height: 4rem !important; }
 
 .shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,0.3) !important; }
 .shadow-md { box-shadow: 0 4px 6px rgba(0,0,0,0.35) !important; }
