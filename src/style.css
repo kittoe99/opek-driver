@@ -2,6 +2,7 @@
 
 body {
   background: #f5f5f5;
+  transition: background-color 0.3s ease;
 }
 
 @theme {
@@ -143,3 +144,59 @@ body {
 }
 
 .pl-bar-2 {}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --color-gray-50: #141425;
+    --color-gray-100: #1a1a30;
+    --color-gray-200: #222240;
+    --color-gray-300: #3a3a58;
+    --color-gray-400: #606080;
+    --color-gray-500: #8080a0;
+    --color-gray-600: #a0a0b8;
+    --color-gray-700: #c0c0d0;
+    --color-gray-800: #d8d8e8;
+    --color-gray-900: #eeeef5;
+  }
+
+  body {
+    background: #080810 !important;
+  }
+
+  .bg-white {
+    background-color: #0f0f1e !important;
+  }
+
+  .shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,0.4) !important; }
+  .shadow-md { box-shadow: 0 4px 6px rgba(0,0,0,0.5) !important; }
+  .shadow-lg { box-shadow: 0 10px 15px rgba(0,0,0,0.5) !important; }
+  .shadow-xl { box-shadow: 0 20px 25px rgba(0,0,0,0.6) !important; }
+  .shadow-2xl { box-shadow: 0 25px 50px rgba(0,0,0,0.6) !important; }
+
+  .leaflet-tile {
+    filter: brightness(0.6) saturate(0.3) hue-rotate(210deg) !important;
+  }
+  .leaflet-control-zoom a {
+    color: #c0c0d0 !important;
+    background: #141425 !important;
+    border-bottom-color: #222240 !important;
+  }
+  .leaflet-control-zoom a:hover {
+    background: #1e1e38 !important;
+  }
+  .leaflet-popup-content-wrapper {
+    background: #141425 !important;
+    color: #d8d8e8 !important;
+  }
+  .leaflet-popup-tip {
+    background: #141425 !important;
+  }
+  .leaflet-control-attribution {
+    background: rgba(15, 15, 30, 0.9) !important;
+  }
+  .map-label {
+    color: #c0c0d0 !important;
+    text-shadow: 0 0 3px #080810, 0 0 3px #080810, 0 0 3px #080810 !important;
+  }
+}
