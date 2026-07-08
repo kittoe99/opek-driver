@@ -85,7 +85,7 @@ body {
 }
 
 .leaflet-tile {
-  filter: none !important;
+  filter: brightness(1.15) contrast(1.1) !important;
 }
 
 .leaflet-popup-content-wrapper {
