@@ -21,11 +21,11 @@ const tabs = [
 ]
 
 const statusConfig = {
-  pending: { bg: 'bg-gray-50 border border-gray-200', dot: 'bg-accent', text: 'text-gray-600', border: 'border-l-accent' },
-  confirmed: { bg: 'bg-gray-50 border border-gray-200', dot: 'bg-accent', text: 'text-gray-600', border: 'border-l-accent' },
-  in_progress: { bg: 'bg-gray-50 border border-gray-200', dot: 'bg-accent', text: 'text-gray-600', border: 'border-l-accent' },
-  completed: { bg: 'bg-gray-50 border border-gray-200', dot: 'bg-accent', text: 'text-gray-600', border: 'border-l-accent' },
-  cancelled: { bg: 'bg-gray-50 border border-gray-200', dot: 'bg-accent', text: 'text-gray-600', border: 'border-l-accent' },
+  pending: { bg: 'bg-white/10 border border-white/15', dot: 'bg-accent', text: 'text-white/80', border: 'border-l-accent' },
+  confirmed: { bg: 'bg-white/10 border border-white/15', dot: 'bg-accent', text: 'text-white/80', border: 'border-l-accent' },
+  in_progress: { bg: 'bg-white/10 border border-white/15', dot: 'bg-accent', text: 'text-white/80', border: 'border-l-accent' },
+  completed: { bg: 'bg-white/10 border border-white/15', dot: 'bg-accent', text: 'text-white/80', border: 'border-l-accent' },
+  cancelled: { bg: 'bg-white/10 border border-white/15', dot: 'bg-accent', text: 'text-white/80', border: 'border-l-accent' },
 }
 
 const serviceTypeConfig = {
@@ -74,11 +74,11 @@ let jobsFilter = 'active'
 
 const assignmentStatusConfig = {
   offered: { bg: 'bg-accent/10', text: 'text-accent', border: 'border-l-accent' },
-  accepted: { bg: 'bg-gray-50 border border-gray-200', text: 'text-gray-600', border: 'border-l-accent' },
-  in_progress: { bg: 'bg-gray-50 border border-gray-200', text: 'text-gray-600', border: 'border-l-accent' },
-  completed: { bg: 'bg-gray-50 border border-gray-200', text: 'text-gray-600', border: 'border-l-accent' },
-  declined: { bg: 'bg-gray-50 border border-gray-200', text: 'text-gray-600', border: 'border-l-accent' },
-  cancelled: { bg: 'bg-gray-50 border border-gray-200', text: 'text-gray-600', border: 'border-l-accent' },
+  accepted: { bg: 'bg-white/10 border border-white/15', text: 'text-white/80', border: 'border-l-accent' },
+  in_progress: { bg: 'bg-white/10 border border-white/15', text: 'text-white/80', border: 'border-l-accent' },
+  completed: { bg: 'bg-white/10 border border-white/15', text: 'text-white/80', border: 'border-l-accent' },
+  declined: { bg: 'bg-white/10 border border-white/15', text: 'text-white/80', border: 'border-l-accent' },
+  cancelled: { bg: 'bg-white/10 border border-white/15', text: 'text-white/80', border: 'border-l-accent' },
 }
 
 function parseStatesInput(v) { return v.split(/[,;\s]+/).map(s=>s.trim().toUpperCase()).filter(s=>s.length===2) }
