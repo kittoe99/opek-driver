@@ -129,7 +129,7 @@ async function renderConnectPayouts(containerEl) {
       headers: { Authorization: `Bearer ${s.access_token}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ component: 'payouts' }),
     }).then(r => r.json()).then(d => d.client_secret),
-    appearance: { variables: { colorPrimary: window.matchMedia('(prefers-color-scheme: dark)').matches ? '#ff006e' : '#355070', borderRadius: '12px' } },
+    appearance: { variables: { colorPrimary: '#ff006e', borderRadius: '12px' } },
   })
   const payouts = connectPayoutsInstance.create('payouts')
   containerEl.innerHTML = ''
