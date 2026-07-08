@@ -339,7 +339,7 @@ function renderScheduleContent(){
 
 function renderSettingsContent(){
   const statusLabel=driver?.status?driver.status.charAt(0).toUpperCase()+driver.status.slice(1):'Unknown'
-  const statusColor=driver?.status==='approved'?'text-accent':driver?.status==='suspended'?'text-red-600':'text-amber-600'
+  const statusColor=driver?.status==='approved'?'text-white/80':driver?.status==='suspended'?'text-red-600':'text-amber-600'
   const signupStatusLabel=providerSignup?.status==='pending'?' · Application Pending':''
 
   const editRight=`<span class="flex items-center gap-1.5 text-[11px] font-medium text-accent"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>Edit</span>`
