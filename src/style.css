@@ -19,7 +19,7 @@ html {
 }
 
 body {
-  background: #d1d1d1;
+  background: #6c6c6c;
 }
 
 @theme {
@@ -35,7 +35,7 @@ body {
 }
 
 .bg-white {
-  background-color: #c5c5c5 !important;
+  background-color: #656565 !important;
 }
 
 .w-4.h-4 { width: 1.25rem !important; height: 1.25rem !important; }
@@ -73,7 +73,7 @@ body {
   font-size: 10px !important;
   font-weight: 600 !important;
   color: #dddde8 !important;
-  text-shadow: 0 0 3px #d1d1d1, 0 0 3px #d1d1d1, 0 0 3px #d1d1d1;
+  text-shadow: 0 0 3px #6c6c6c, 0 0 3px #6c6c6c, 0 0 3px #6c6c6c;
   padding: 0 !important;
   margin: 0 !important;
 }
@@ -95,15 +95,15 @@ body {
 }
 
 #map-container, .leaflet-container {
-  background: #c5c5c5 !important;
+  background: #656565 !important;
 }
 
 #booking-detail {
-  background: #d1d1d1 !important;
+  background: #6c6c6c !important;
 }
 
 #completion-form {
-  background: #d1d1d1 !important;
+  background: #6c6c6c !important;
 }
 
 .leaflet-popup-content-wrapper {
