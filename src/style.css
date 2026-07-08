@@ -19,7 +19,7 @@ html {
 }
 
 body {
-  background: #474747;
+  background: #d1d1d1;
 }
 
 @theme {
@@ -73,7 +73,7 @@ body {
   font-size: 10px !important;
   font-weight: 600 !important;
   color: #dddde8 !important;
-  text-shadow: 0 0 3px #474747, 0 0 3px #474747, 0 0 3px #474747;
+  text-shadow: 0 0 3px #d1d1d1, 0 0 3px #d1d1d1, 0 0 3px #d1d1d1;
   padding: 0 !important;
   margin: 0 !important;
 }
@@ -99,11 +99,11 @@ body {
 }
 
 #booking-detail {
-  background: #474747 !important;
+  background: #d1d1d1 !important;
 }
 
 #completion-form {
-  background: #474747 !important;
+  background: #d1d1d1 !important;
 }
 
 .leaflet-popup-content-wrapper {
