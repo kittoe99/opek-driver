@@ -19,7 +19,7 @@ html {
 }
 
 body {
-  background: #000000;
+  background: #1a1a1a;
 }
 
 @theme {
@@ -35,7 +35,7 @@ body {
 }
 
 .bg-white {
-  background-color: #1a1a1a !important;
+  background-color: #000000 !important;
 }
 
 .w-4.h-4 { width: 1.25rem !important; height: 1.25rem !important; }
@@ -73,7 +73,7 @@ body {
   font-size: 10px !important;
   font-weight: 600 !important;
   color: #dddde8 !important;
-  text-shadow: 0 0 3px #000000, 0 0 3px #000000, 0 0 3px #000000;
+  text-shadow: 0 0 3px #1a1a1a, 0 0 3px #1a1a1a, 0 0 3px #1a1a1a;
   padding: 0 !important;
   margin: 0 !important;
 }
@@ -95,7 +95,7 @@ body {
 }
 
 #map-container, .leaflet-container {
-  background: #1a1a1a !important;
+  background: #000000 !important;
 }
 
 .leaflet-popup-content-wrapper {
