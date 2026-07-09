@@ -1,5 +1,7 @@
 @import "tailwindcss";
 
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
 :root {
   color-scheme: light;
   --color-gray-50: #f9fafb;
@@ -20,22 +22,37 @@ html {
 
 body {
   background: #ffffff;
+  color: #111111;
+  font-family: 'Inter', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  letter-spacing: -0.01em;
 }
 
 @theme {
-  --color-brand: #355070;
-  --color-brand-50: #eef1f6;
-  --color-brand-100: #d2d9e6;
-  --color-brand-200: #a4b2cc;
-  --color-brand-700: #1c2b42;
+  --color-brand: #ff006e;
+  --color-brand-50: #fff0f6;
+  --color-brand-100: #ffd6e6;
+  --color-brand-400: #ff3387;
+  --color-brand-500: #ff006e;
+  --color-brand-600: #e60063;
+  --color-brand-700: #b30049;
   --color-secondary: #355070;
+  --color-secondary-50: #f4f6f8;
+  --color-secondary-100: #e1e5ea;
+  --color-secondary-200: #c3cbd4;
+  --color-secondary-300: #9aa6b7;
+  --color-secondary-400: #6e7f99;
+  --color-secondary-500: #355070;
+  --color-secondary-600: #2d4460;
+  --color-secondary-700: #23354d;
   --color-accent: #ff006e;
   --color-accent-50: #fff0f6;
   --color-accent-100: #ffd6e6;
 }
 
 .bg-white {
-  background-color: #fefefe !important;
+  background-color: #ffffff !important;
 }
 
 .w-4.h-4 { width: 1.25rem !important; height: 1.25rem !important; }
@@ -45,11 +62,11 @@ body {
 .w-12.h-12 { width: 3.5rem !important; height: 3.5rem !important; }
 .w-14.h-14 { width: 4rem !important; height: 4rem !important; }
 
-.shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,0.3) !important; }
-.shadow-md { box-shadow: 0 4px 6px rgba(0,0,0,0.35) !important; }
-.shadow-lg { box-shadow: 0 10px 15px rgba(0,0,0,0.35) !important; }
-.shadow-xl { box-shadow: 0 20px 25px rgba(0,0,0,0.4) !important; }
-.shadow-2xl { box-shadow: 0 25px 50px rgba(0,0,0,0.4) !important; }
+.shadow-sm { box-shadow: 0 1px 2px rgba(0,0,0,0.05) !important; }
+.shadow-md { box-shadow: 0 4px 6px rgba(0,0,0,0.07) !important; }
+.shadow-lg { box-shadow: 0 10px 15px rgba(0,0,0,0.08) !important; }
+.shadow-xl { box-shadow: 0 20px 25px rgba(0,0,0,0.10) !important; }
+.shadow-2xl { box-shadow: 0 25px 50px rgba(0,0,0,0.12) !important; }
 
 @keyframes slide-up {
   from { transform: translateY(100%); }
@@ -85,11 +102,11 @@ body {
 }
 
 .leaflet-tile {
-  filter: hue-rotate(200deg) saturate(0.7) brightness(0.95) !important;
+  filter: none !important;
 }
 
 #map-container, .leaflet-container {
-  background: #fefefe !important;
+  background: #ffffff !important;
 }
 
 #booking-detail {
@@ -102,10 +119,10 @@ body {
 
 .leaflet-popup-content-wrapper {
   border-radius: 14px !important;
-  box-shadow: 0 4px 20px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08) !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.10), 0 1px 3px rgba(0,0,0,0.06) !important;
   padding: 0 !important;
-  background: #fff !important;
-  color: #1f2937 !important;
+  background: #ffffff !important;
+  color: #111111 !important;
 }
 
 .leaflet-popup-content {
@@ -115,12 +132,12 @@ body {
 
 .leaflet-popup-tip {
   box-shadow: none !important;
-  background: #fff !important;
+  background: #ffffff !important;
 }
 
 .leaflet-control-zoom {
   border: none !important;
-  box-shadow: 0 2px 12px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06) !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.04) !important;
   border-radius: 12px !important;
   overflow: hidden;
 }
@@ -131,7 +148,7 @@ body {
   line-height: 34px !important;
   font-size: 16px !important;
   color: #374151 !important;
-  background: #fff !important;
+  background: #ffffff !important;
   border-bottom: 1px solid #f3f4f6 !important;
 }
 
@@ -186,11 +203,10 @@ body {
 .pl-bar {
   width: 0.625rem;
   height: 1.5rem;
-  background: #355070;
+  background: #ff006e;
   border-radius: 1px;
   transform: skewX(8deg);
   transform-origin: bottom;
 }
 
 .pl-bar-2 {}
-
